@@ -63,8 +63,10 @@ services:
     environment:
       CRYPTOLAB_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cryptolab}:${POSTGRES_PASSWORD:-cryptolab}@postgres:5432/${POSTGRES_DB:-cryptolab}
       CRYPTOLAB_REDIS_URL: redis://redis:6379/0
-      CRYPTOLAB_JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in deploy/.env}
-      CRYPTOLAB_MASTER_KEY_HEX: ${MASTER_KEY_HEX:?MASTER_KEY_HEX must be set in deploy/.env}
+      # Defaults keep `docker compose config` working without an .env file;
+      # production deploys MUST override both via deploy/.env (see .env.example).
+      CRYPTOLAB_JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+      CRYPTOLAB_MASTER_KEY_HEX: ${MASTER_KEY_HEX:-0000000000000000000000000000000000000000000000000000000000000000}
       CRYPTOLAB_ENVIRONMENT: ${CRYPTOLAB_ENVIRONMENT:-staging}
     volumes:
       - rust-output:/wheels:ro
@@ -73,8 +75,10 @@ services:
 
   frontend:
     build:
-      context: ../frontend
-      dockerfile: ../deploy/Dockerfile.frontend
+      # Build context = repo root so the Dockerfile can COPY frontend/ in.
+      # Dockerfile path is relative to the context, not to this compose file.
+      context: ..
+      dockerfile: deploy/Dockerfile.frontend
     container_name: cryptolab-frontend
     restart: unless-stopped
     depends_on: [api]

@@ -35,10 +35,14 @@ getrandom = "0.2"
 # Secret-zeroizing on drop (key material).
 zeroize = { version = "1.7", features = ["derive"] }
 
-# Reference implementations used ONLY for cross-validation tests, never in
-# production paths. Kept behind the "reference-validation" feature.
+# Reference implementations kept ONLY for cross-validation tests, never on
+# production paths. Behind the "reference-validation" feature.
 sha2 = { version = "0.10", optional = true }
 sha3 = { version = "0.10", optional = true }
+ripemd = { version = "0.1", optional = true }
+
+# Hex codec — used by FFI conversion helpers + test vector parsing.
+hex = "0.4"
 
 # Error helpers.
 thiserror = "1.0"
@@ -51,7 +55,7 @@ proptest = "1.4"
 [features]
 default = []
 # Enable cross-checking against RustCrypto reference impls in tests.
-reference-validation = ["sha2", "sha3"]
+reference-validation = ["sha2", "sha3", "ripemd"]
 
 [profile.release]
 opt-level = 3
