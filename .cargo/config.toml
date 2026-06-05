@@ -1,0 +1,28 @@
+# Project-local Cargo configuration.
+#
+# IMPORTANT: this file deliberately keeps Cargo state inside the project.
+# Combined with `scripts/env.sh`, all rust artifacts live under:
+#   ./.cargo-home   (CARGO_HOME — registry cache, installed bins)
+#   ./.rustup-home  (RUSTUP_HOME — toolchains)
+#   ./target        (build output, set below)
+#
+# Never run cargo without first sourcing scripts/env.sh — otherwise the system
+# will fall back to ~/.cargo and ~/.rustup, which violates the dependency
+# isolation rule for this project.
+
+[build]
+target-dir = "target"
+
+[net]
+# Use git CLI for fetching to play nicely with corporate / CN mirrors.
+git-fetch-with-cli = true
+
+# Optional China-mainland mirror. Uncomment if upstream crates.io is slow.
+# [source.crates-io]
+# replace-with = "ustc"
+#
+# [source.ustc]
+# registry = "sparse+https://mirrors.ustc.edu.cn/crates.io-index/"
+
+[term]
+verbose = false

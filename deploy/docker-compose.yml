@@ -1,0 +1,100 @@
+# CryptoLab — full-stack docker-compose.
+# Usage:
+#   docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d
+#
+# Services:
+#   postgres       — durable store
+#   redis          — rate-limit counters + JWT blacklist
+#   rust-builder   — one-shot build of the Rust core into a wheel
+#   api            — FastAPI server, depends on rust-builder + postgres + redis
+#   frontend       — Vite build served by nginx
+#   nginx          — TLS terminator + reverse proxy (443 → api/frontend)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cryptolab-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cryptolab}
+      POSTGRES_USER: ${POSTGRES_USER:-cryptolab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cryptolab}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cryptolab}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: cryptolab-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rust-builder:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.rust
+    container_name: cryptolab-rust-builder
+    volumes:
+      - rust-output:/output
+    # One-shot: build the wheel into /output then exit cleanly.
+    restart: "no"
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    container_name: cryptolab-api
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rust-builder: { condition: service_completed_successfully }
+    environment:
+      CRYPTOLAB_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cryptolab}:${POSTGRES_PASSWORD:-cryptolab}@postgres:5432/${POSTGRES_DB:-cryptolab}
+      CRYPTOLAB_REDIS_URL: redis://redis:6379/0
+      CRYPTOLAB_JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in deploy/.env}
+      CRYPTOLAB_MASTER_KEY_HEX: ${MASTER_KEY_HEX:?MASTER_KEY_HEX must be set in deploy/.env}
+      CRYPTOLAB_ENVIRONMENT: ${CRYPTOLAB_ENVIRONMENT:-staging}
+    volumes:
+      - rust-output:/wheels:ro
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../deploy/Dockerfile.frontend
+    container_name: cryptolab-frontend
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "3000:80"
+
+  nginx:
+    image: nginx:alpine
+    container_name: cryptolab-nginx
+    restart: unless-stopped
+    depends_on: [api, frontend]
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      # Mount TLS material from the host; certs are NOT baked into the image.
+      - ./certs:/etc/nginx/certs:ro
+
+volumes:
+  pgdata:
+  redisdata:
+  rust-output:

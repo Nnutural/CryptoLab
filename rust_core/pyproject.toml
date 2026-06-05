@@ -1,0 +1,26 @@
+[build-system]
+requires = ["maturin>=1.4,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "cryptolab_core"
+version = "0.1.0"
+description = "Rust-implemented cryptographic primitives exposed to Python via PyO3."
+readme = "../README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [{ name = "CryptoLab Contributors" }]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Security :: Cryptography",
+]
+
+[tool.maturin]
+# Build the cdylib produced by Cargo.toml as a Python extension named
+# `cryptolab_core`. Generated .so / .pyd is dropped into the active venv
+# so `import cryptolab_core` works immediately after `maturin develop`.
+features = ["pyo3/extension-module"]
+module-name = "cryptolab_core"
+strip = true

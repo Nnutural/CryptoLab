@@ -1,0 +1,18 @@
+# One-shot builder: compiles rust_core into a Python wheel and drops it in /output.
+FROM rust:1.78-slim-bookworm AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3 python3-dev python3-pip pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir --break-system-packages "maturin==1.5.*"
+
+WORKDIR /src
+COPY rust_core ./rust_core
+COPY README.md ./README.md
+
+WORKDIR /src/rust_core
+RUN maturin build --release --strip --out /output
+
+# /output now contains cryptolab_core-*.whl
+CMD ["sh", "-c", "ls -l /output"]

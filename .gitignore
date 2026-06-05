@@ -1,0 +1,57 @@
+# ===== Project-local toolchain & deps (must stay inside repo, but not in VCS) =====
+.cargo-home/
+.rustup-home/
+.npm-cache/
+.npm-global/
+.venv/
+venv/
+env/
+
+# ===== Rust =====
+target/
+**/*.rs.bk
+Cargo.lock
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.so
+*.pyd
+
+# ===== Node / Frontend =====
+node_modules/
+frontend/dist/
+.vite/
+*.local
+
+# ===== Editors / OS =====
+.idea/
+.vscode/*
+!.vscode/settings.json.sample
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ===== Secrets & local config =====
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+!docs/**/*.key.sample
+
+# ===== Logs & runtime =====
+*.log
+logs/
+pgdata/
+redisdata/
