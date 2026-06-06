@@ -68,12 +68,12 @@ CryptoLab/
 │   ├── Dockerfile.frontend
 │   └── nginx.conf
 │
-├── scripts/                      # 一键化脚本
+├── scripts/                      # 一键化脚本（.sh 与 .ps1 等价并列）
 │   ├── env.sh / env.ps1          # 设置项目级环境变量（CARGO_HOME 等）
 │   ├── setup.sh / setup.ps1      # 首次环境初始化
-│   ├── build-rust.sh             # 编译 Rust → Python 扩展（maturin develop）
-│   ├── test-all.sh
-│   └── bench.sh
+│   ├── build-rust.sh / build-rust.ps1   # 编译 Rust → Python 扩展（maturin develop）
+│   ├── test-all.sh / test-all.ps1
+│   └── bench.sh / bench.ps1
 │
 ├── benchmarks/                   # criterion 基准（占位）
 ├── docs/                         # 设计文档与报告（占位）
@@ -90,24 +90,26 @@ CryptoLab/
 
 ## 3. 构建与运行命令速查
 
-| 任务                    | 命令                                                            |
-| ----------------------- | --------------------------------------------------------------- |
-| **首次环境初始化**      | `source scripts/env.sh && bash scripts/setup.sh`                |
-| 每个新终端先做这一步    | `source scripts/env.sh`                                         |
-| 编译 Rust → Python 扩展 | `bash scripts/build-rust.sh`                                    |
-| 单独 cargo build        | `cargo build --release --manifest-path rust_core/Cargo.toml`    |
-| Rust 测试               | `cargo test --manifest-path rust_core/Cargo.toml`               |
-| Rust lint               | `cargo clippy --manifest-path rust_core/Cargo.toml -- -D warnings` |
-| Rust 格式化             | `cargo fmt --manifest-path rust_core/Cargo.toml --all`          |
-| 启动 API（开发）        | `uvicorn app.main:app --reload --app-dir api_server`            |
-| Python 测试             | `pytest api_server/tests`                                       |
-| Python lint             | `ruff check api_server && mypy api_server/app`                  |
-| Python 格式化           | `ruff format api_server`                                        |
-| 启动前端 dev            | `cd frontend && npm run dev`                                    |
-| 全栈跑测试              | `bash scripts/test-all.sh`                                      |
-| 基准测试                | `bash scripts/bench.sh`                                         |
-| 容器化启动              | `docker compose -f deploy/docker-compose.yml up -d`             |
-| 数据库迁移              | `cd api_server && alembic upgrade head`                         |
+Bash 与 PowerShell 等价，二选一。Windows 用户也可以直接在 Git Bash 里跑 Bash 列。
+
+| 任务                    | Bash                                                            | PowerShell                                                                          |
+| ----------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **首次环境初始化**      | `source scripts/env.sh && bash scripts/setup.sh`                | `. .\scripts\env.ps1; powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1` |
+| 每个新终端先做这一步    | `source scripts/env.sh`                                         | `. .\scripts\env.ps1`                                                               |
+| 编译 Rust → Python 扩展 | `bash scripts/build-rust.sh`                                    | `powershell -ExecutionPolicy Bypass -File .\scripts\build-rust.ps1`                 |
+| 单独 cargo build        | `cargo build --release --manifest-path rust_core/Cargo.toml`    | 同左                                                                                |
+| Rust 测试               | `cargo test --manifest-path rust_core/Cargo.toml`               | 同左                                                                                |
+| Rust lint               | `cargo clippy --manifest-path rust_core/Cargo.toml -- -D warnings` | 同左                                                                            |
+| Rust 格式化             | `cargo fmt --manifest-path rust_core/Cargo.toml --all`          | 同左                                                                                |
+| 启动 API（开发）        | `uvicorn app.main:app --reload --app-dir api_server`            | `uvicorn app.main:app --reload --app-dir api_server`                                |
+| Python 测试             | `pytest api_server/tests`                                       | `pytest api_server/tests`                                                           |
+| Python lint             | `ruff check api_server && mypy api_server/app`                  | `ruff check api_server; mypy api_server/app`                                        |
+| Python 格式化           | `ruff format api_server`                                        | `ruff format api_server`                                                            |
+| 启动前端 dev            | `cd frontend && npm run dev`                                    | `cd frontend; npm run dev`                                                          |
+| 全栈跑测试              | `bash scripts/test-all.sh`                                      | `powershell -ExecutionPolicy Bypass -File .\scripts\test-all.ps1`                   |
+| 基准测试                | `bash scripts/bench.sh`                                         | `powershell -ExecutionPolicy Bypass -File .\scripts\bench.ps1`                      |
+| 容器化启动              | `docker compose -f deploy/docker-compose.yml up -d`             | `docker compose -f deploy/docker-compose.yml up -d`                                 |
+| 数据库迁移              | `cd api_server && alembic upgrade head`                         | `cd api_server; alembic upgrade head`                                               |
 
 ---
 

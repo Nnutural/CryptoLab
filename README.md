@@ -58,11 +58,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 执行完后你应该看到以下目录全部位于项目内：
 
 ```
-.cargo-home/      # Rust 注册表缓存 + cargo install 的二进制
-.rustup-home/     # Rust 工具链
-.venv/            # Python 虚拟环境
+.cargo-home/             # Rust 注册表缓存 + cargo install 的二进制
+.rustup-home/            # Rust 工具链
+.pip-cache/              # pip 下载缓存（PowerShell 端由 env.ps1 设置）
+api_server/.venv/        # Python 虚拟环境（PowerShell 安装位置）
+.venv/                   # Python 虚拟环境（Bash 安装位置 — 二选一）
 frontend/node_modules/   # 前端依赖
-.npm-cache/       # npm 缓存
+.npm-cache/              # npm 缓存
+.npm-global/             # npm prefix（全局二进制）
 ```
 
 > **每次新开终端**都需要再次 `source scripts/env.sh`（或 `. .\scripts\env.ps1`）。
@@ -72,18 +75,22 @@ frontend/node_modules/   # 前端依赖
 
 ## 3. 日常命令速查
 
-| 操作                | 命令                                                |
-| ------------------- | --------------------------------------------------- |
-| 编译 Rust 核心库    | `bash scripts/build-rust.sh`                        |
-| 启动 Python API     | `cd api_server && uvicorn app.main:app --reload`    |
-| 启动前端 dev server | `cd frontend && npm run dev`                        |
-| 跑全部测试          | `bash scripts/test-all.sh`                          |
-| 性能基准            | `bash scripts/bench.sh`                             |
-| 容器化一键启动      | `docker compose -f deploy/docker-compose.yml up -d` |
-| Rust 格式化         | `cargo fmt --all` (in `rust_core/`)                 |
-| Rust lint           | `cargo clippy --all-targets -- -D warnings`         |
-| Python 格式化       | `ruff format api_server`                            |
-| Python lint         | `ruff check api_server && mypy api_server/app`      |
+下表 Bash 与 PowerShell 并列展示。Windows 用户也可以直接用 Git Bash 跑 Bash 那列。
+
+| 操作                | Bash (Linux/macOS/WSL/Git Bash)                   | PowerShell (Windows 原生)                                              |
+| ------------------- | ------------------------------------------------- | ---------------------------------------------------------------------- |
+| 加载隔离环境        | `source scripts/env.sh`                           | `. .\scripts\env.ps1`                                                  |
+| 首次环境初始化      | `bash scripts/setup.sh`                           | `powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1`         |
+| 编译 Rust 核心库    | `bash scripts/build-rust.sh`                      | `powershell -ExecutionPolicy Bypass -File .\scripts\build-rust.ps1`    |
+| 启动 Python API     | `cd api_server && uvicorn app.main:app --reload`  | `cd api_server; uvicorn app.main:app --reload`                         |
+| 启动前端 dev server | `cd frontend && npm run dev`                      | `cd frontend; npm run dev`                                             |
+| 跑全部测试          | `bash scripts/test-all.sh`                        | `powershell -ExecutionPolicy Bypass -File .\scripts\test-all.ps1`      |
+| 性能基准            | `bash scripts/bench.sh`                           | `powershell -ExecutionPolicy Bypass -File .\scripts\bench.ps1`         |
+| 容器化一键启动      | `docker compose -f deploy/docker-compose.yml up -d` | `docker compose -f deploy/docker-compose.yml up -d`                  |
+| Rust 格式化         | `cargo fmt --manifest-path rust_core/Cargo.toml --all` | `cargo fmt --manifest-path rust_core/Cargo.toml --all`            |
+| Rust lint           | `cargo clippy --manifest-path rust_core/Cargo.toml --all-targets -- -D warnings` | 同左                                       |
+| Python 格式化       | `ruff format api_server`                          | `ruff format api_server`                                               |
+| Python lint         | `ruff check api_server && mypy api_server/app`    | `ruff check api_server; mypy api_server/app`                           |
 
 ---
 

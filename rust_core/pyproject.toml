@@ -6,7 +6,6 @@ build-backend = "maturin"
 name = "cryptolab_core"
 version = "0.1.0"
 description = "Rust-implemented cryptographic primitives exposed to Python via PyO3."
-readme = "../README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11"
 authors = [{ name = "CryptoLab Contributors" }]

@@ -31,7 +31,7 @@ impl Aes {
         _aad: Option<&[u8]>,
         _padding: &str,
     ) -> CryptoResult<Vec<u8>> {
-        todo!("dispatch to crate::modes::{ecb, cbc, ctr, gcm} using self as block primitive")
+        todo!("dispatch to crate::modes::{{ecb, cbc, ctr, gcm}} using self as block primitive")
     }
 
     /// Decrypt arbitrary-length ciphertext under the chosen mode + padding.

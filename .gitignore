@@ -26,6 +26,7 @@ dist/
 build/
 *.so
 *.pyd
+.pip-cache/
 
 # ===== Node / Frontend =====
 node_modules/
