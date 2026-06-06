@@ -12,6 +12,9 @@ if (-not $env:CRYPTOLAB_ROOT) {
     exit 1
 }
 
+$env:PYTHONUTF8 = "1"
+$env:PYTHONIOENCODING = "utf-8"
+
 Push-Location (Join-Path $env:CRYPTOLAB_ROOT "rust_core")
 try {
     # Pick the venv's python.exe as maturin's target interpreter so the wheel
@@ -27,8 +30,8 @@ try {
         $PythonExe = $PythonCmd.Source
     }
 
-    Write-Host "==> maturin develop --release (interpreter: $PythonExe)"
-    maturin develop --release -i "$PythonExe"
+    Write-Host "==> maturin develop --release (active interpreter: $PythonExe)"
+    maturin develop --release
     if ($LASTEXITCODE -ne 0) { Write-Error "maturin develop failed."; exit 1 }
 
     Write-Host "==> smoke test"

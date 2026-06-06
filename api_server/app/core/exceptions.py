@@ -41,14 +41,13 @@ def install_exception_handlers(app: FastAPI) -> None:
         return _envelope(request, exc.code, exc.message, exc.data)
 
     @app.exception_handler(RequestValidationError)
-    async def handle_validation(
-        request: Request, exc: RequestValidationError
-    ) -> JSONResponse:
+    async def handle_validation(request: Request, exc: RequestValidationError) -> JSONResponse:
         return _envelope(
             request,
             StatusCode.PARAM_MISSING,
             "Request validation failed",
             data={"errors": exc.errors()},
+            http_status=422,
         )
 
     @app.exception_handler(Exception)
@@ -63,9 +62,10 @@ def _envelope(
     code: int,
     message: str,
     data: dict[str, Any] | None = None,
+    http_status: int | None = None,
 ) -> JSONResponse:
     trace_id = getattr(request.state, "trace_id", None) or "00000000-0000-0000-0000-000000000000"
     body = APIResponse(code=code, message=message, data=data, trace_id=trace_id).model_dump(
         mode="json"
     )
-    return JSONResponse(status_code=HTTP_FOR_STATUS.get(code, 500), content=body)
+    return JSONResponse(status_code=http_status or HTTP_FOR_STATUS.get(code, 500), content=body)

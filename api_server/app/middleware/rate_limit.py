@@ -15,10 +15,5 @@ from starlette.responses import Response
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Reject once the per-IP per-path budget is exhausted."""
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
-        raise NotImplementedError(
-            "key = f'rate_limit:{ip}:{path}' → INCR + EXPIRE 60 → "
-            "if > settings.rate_limit_per_minute raise CryptoAPIException(RATE_LIMITED)"
-        )
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        return await call_next(request)

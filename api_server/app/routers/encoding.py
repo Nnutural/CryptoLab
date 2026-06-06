@@ -2,23 +2,51 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Path
+from fastapi import APIRouter, Path, Request
 
+from app.core.exceptions import CryptoAPIException
+from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
 from app.schemas.common import APIResponse
-from app.schemas.encoding import EncodingRequest, EncodingResult
+from app.schemas.encoding import DecodeRequest, DecodeResponse, EncodeRequest, EncodeResponse
+from app.services import encoding_service
 
 router = APIRouter()
 
-OP = Path(..., regex="^(encode|decode)$")
+OP = Path(..., pattern="^(encode|decode)$")
 
 
-@router.post("/base64/{op}", response_model=APIResponse[EncodingResult])
-async def base64(op: str = OP, _req: EncodingRequest | None = None) -> APIResponse[EncodingResult]:
+@router.post("/base64/{op}", response_model=APIResponse[EncodeResponse | DecodeResponse])
+async def base64(
+    request: Request,
+    op: str = OP,
+    req: EncodeRequest | DecodeRequest | None = None,
+) -> APIResponse[EncodeResponse | DecodeResponse]:
     """Base64 encode / decode."""
-    raise NotImplementedError("services.encoding_service.base64(op, req)")
+    if op == "encode":
+        if not isinstance(req, EncodeRequest):
+            raise CryptoAPIException(StatusCode.PARAM_MISSING, "EncodeRequest.data is required")
+        result = await encoding_service.base64_encode(req)
+    else:
+        if not isinstance(req, DecodeRequest):
+            raise CryptoAPIException(StatusCode.PARAM_MISSING, "DecodeRequest.encoded is required")
+        result = await encoding_service.base64_decode(req)
+
+    return APIResponse(
+        code=StatusCode.OK,
+        message=DEFAULT_MESSAGES[StatusCode.OK],
+        data=result,
+        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
+    )
 
 
-@router.post("/utf8/{op}", response_model=APIResponse[EncodingResult])
-async def utf8(op: str = OP, _req: EncodingRequest | None = None) -> APIResponse[EncodingResult]:
+@router.post("/utf8/{op}", response_model=APIResponse[dict[str, str]])
+async def utf8(
+    request: Request,
+    op: str = OP,
+    _req: dict[str, str] | None = None,
+) -> APIResponse[dict[str, str]]:
     """UTF-8 encode (str → bytes) / decode (bytes → str)."""
-    raise NotImplementedError("services.encoding_service.utf8(op, req)")
+    raise CryptoAPIException(
+        StatusCode.ALGORITHM_UNSUPPORTED,
+        f"UTF-8 {op} is not implemented in this phase",
+    )

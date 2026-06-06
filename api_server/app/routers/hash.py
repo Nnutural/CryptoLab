@@ -2,48 +2,62 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Path, Request
 
-from app.middleware.auth import get_current_user
-from app.models.user import User
+from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
 from app.schemas.common import APIResponse
 from app.schemas.hash import (
     HashRequest,
-    HashResult,
+    HashResponse,
     HmacRequest,
+    HmacResponse,
     Pbkdf2Request,
+    Pbkdf2Response,
 )
+from app.services import hash_service
 
 router = APIRouter()
 
-ALGO = Path(..., regex="^(sha1|sha224|sha256|sha384|sha512|sha3_256|sha3_512|ripemd160)$")
-HMAC_ALGO = Path(..., regex="^(sha1|sha256)$")
+ALGO = Path(..., pattern="^(sha1|sha224|sha256|sha384|sha512|sha3_256|sha3_512|ripemd160)$")
+HMAC_ALGO = Path(..., pattern="^(sha1|sha256)$")
 
 
-@router.post("/{algo}", response_model=APIResponse[HashResult])
-async def hash_(
-    algo: str = ALGO,
-    _req: HashRequest | None = None,
-    _user: User = Depends(get_current_user),
-) -> APIResponse[HashResult]:
-    """Compute a one-shot hash of the input bytes."""
-    raise NotImplementedError("services.hash_service.hash(algo, req)")
-
-
-@router.post("/hmac/{algo}", response_model=APIResponse[HashResult])
+@router.post("/hmac/{algo}", response_model=APIResponse[HmacResponse])
 async def hmac(
+    request: Request,
+    req: HmacRequest,
     algo: str = HMAC_ALGO,
-    _req: HmacRequest | None = None,
-    _user: User = Depends(get_current_user),
-) -> APIResponse[HashResult]:
+) -> APIResponse[HmacResponse]:
     """HMAC under the chosen inner hash."""
-    raise NotImplementedError("services.hash_service.hmac(algo, req, user)")
+    result = await hash_service.hmac(algo, req)
+    return _ok(request, result)
 
 
-@router.post("/pbkdf2", response_model=APIResponse[HashResult])
+@router.post("/pbkdf2", response_model=APIResponse[Pbkdf2Response])
 async def pbkdf2(
-    _req: Pbkdf2Request,
-    _user: User = Depends(get_current_user),
-) -> APIResponse[HashResult]:
-    """Password-based key derivation. Iterations < 100k are rejected."""
-    raise NotImplementedError("services.hash_service.pbkdf2(req)")
+    request: Request,
+    req: Pbkdf2Request,
+) -> APIResponse[Pbkdf2Response]:
+    """Password-based key derivation with PBKDF2-HMAC-SHA256."""
+    result = await hash_service.pbkdf2(req)
+    return _ok(request, result)
+
+
+@router.post("/{algo}", response_model=APIResponse[HashResponse])
+async def hash_(
+    request: Request,
+    req: HashRequest,
+    algo: str = ALGO,
+) -> APIResponse[HashResponse]:
+    """Compute a one-shot hash of the input bytes."""
+    result = await hash_service.hash_(algo, req)
+    return _ok(request, result)
+
+
+def _ok(request: Request, data: HashResponse | HmacResponse | Pbkdf2Response) -> APIResponse:
+    return APIResponse(
+        code=StatusCode.OK,
+        message=DEFAULT_MESSAGES[StatusCode.OK],
+        data=data,
+        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
+    )

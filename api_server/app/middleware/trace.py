@@ -16,10 +16,9 @@ class TraceIDMiddleware(BaseHTTPMiddleware):
     and the exception handlers to read.
     """
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
-        raise NotImplementedError(
-            "read X-Trace-Id header → fallback uuid4 → bind to request.state.trace_id "
-            "and structlog contextvars → call_next → echo header on response"
-        )
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        trace_id = request.headers.get("X-Trace-Id") or str(uuid4())
+        request.state.trace_id = trace_id
+        response = await call_next(request)
+        response.headers["X-Trace-Id"] = trace_id
+        return response

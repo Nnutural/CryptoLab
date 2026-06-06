@@ -26,13 +26,22 @@ pub fn register(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
 
     // ----- hash -----
     m.add_function(wrap_pyfunction!(sha1, m)?)?;
+    m.add_function(wrap_pyfunction!(sha1_digest, m)?)?;
     m.add_function(wrap_pyfunction!(sha224, m)?)?;
+    m.add_function(wrap_pyfunction!(sha224_digest, m)?)?;
     m.add_function(wrap_pyfunction!(sha256, m)?)?;
+    m.add_function(wrap_pyfunction!(sha256_digest, m)?)?;
     m.add_function(wrap_pyfunction!(sha384, m)?)?;
+    m.add_function(wrap_pyfunction!(sha384_digest, m)?)?;
     m.add_function(wrap_pyfunction!(sha512, m)?)?;
+    m.add_function(wrap_pyfunction!(sha512_digest, m)?)?;
     m.add_function(wrap_pyfunction!(sha3_256, m)?)?;
+    m.add_function(wrap_pyfunction!(sha3_256_digest, m)?)?;
     m.add_function(wrap_pyfunction!(sha3_512, m)?)?;
+    m.add_function(wrap_pyfunction!(sha3_512_digest, m)?)?;
     m.add_function(wrap_pyfunction!(ripemd160, m)?)?;
+    m.add_function(wrap_pyfunction!(ripemd160_digest, m)?)?;
+    m.add_function(wrap_pyfunction!(hmac_sha1, m)?)?;
     m.add_function(wrap_pyfunction!(hmac_sha256, m)?)?;
     m.add_function(wrap_pyfunction!(pbkdf2_hmac_sha256, m)?)?;
 
@@ -184,8 +193,18 @@ fn sha1<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
 }
 
 #[pyfunction]
+fn sha1_digest<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
+    sha1(py, data)
+}
+
+#[pyfunction]
 fn sha224<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
     Ok(PyBytes::new(py, &crate::hash::sha2::sha224(data)))
+}
+
+#[pyfunction]
+fn sha224_digest<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
+    sha224(py, data)
 }
 
 #[pyfunction]
@@ -194,8 +213,18 @@ fn sha256<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
 }
 
 #[pyfunction]
+fn sha256_digest<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
+    sha256(py, data)
+}
+
+#[pyfunction]
 fn sha384<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
     Ok(PyBytes::new(py, &crate::hash::sha2::sha384(data)))
+}
+
+#[pyfunction]
+fn sha384_digest<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
+    sha384(py, data)
 }
 
 #[pyfunction]
@@ -204,8 +233,18 @@ fn sha512<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
 }
 
 #[pyfunction]
+fn sha512_digest<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
+    sha512(py, data)
+}
+
+#[pyfunction]
 fn sha3_256<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
     Ok(PyBytes::new(py, &crate::hash::sha3::sha3_256(data)))
+}
+
+#[pyfunction]
+fn sha3_256_digest<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
+    sha3_256(py, data)
 }
 
 #[pyfunction]
@@ -214,27 +253,48 @@ fn sha3_512<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
 }
 
 #[pyfunction]
+fn sha3_512_digest<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
+    sha3_512(py, data)
+}
+
+#[pyfunction]
 fn ripemd160<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
     Ok(PyBytes::new(py, &crate::hash::ripemd::ripemd160(data)))
 }
 
 #[pyfunction]
-fn hmac_sha256<'py>(py: Python<'py>, key: &[u8], message: &[u8]) -> PyResult<&'py PyBytes> {
-    to_pybytes(py, crate::hash::hmac::hmac_sha256(key, message))
+fn ripemd160_digest<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
+    ripemd160(py, data)
 }
 
 #[pyfunction]
-#[pyo3(signature = (password, salt, iterations, dk_len))]
+fn hmac_sha256<'py>(py: Python<'py>, key: &[u8], message: &[u8]) -> PyResult<&'py PyBytes> {
+    Ok(PyBytes::new(
+        py,
+        &crate::hash::hmac::hmac_sha256(key, message),
+    ))
+}
+
+#[pyfunction]
+fn hmac_sha1<'py>(py: Python<'py>, key: &[u8], message: &[u8]) -> PyResult<&'py PyBytes> {
+    Ok(PyBytes::new(
+        py,
+        &crate::hash::hmac::hmac_sha1(key, message),
+    ))
+}
+
+#[pyfunction]
+#[pyo3(signature = (password, salt, iterations, key_len))]
 fn pbkdf2_hmac_sha256<'py>(
     py: Python<'py>,
     password: &[u8],
     salt: &[u8],
     iterations: u32,
-    dk_len: usize,
+    key_len: usize,
 ) -> PyResult<&'py PyBytes> {
     to_pybytes(
         py,
-        crate::hash::pbkdf2::pbkdf2_hmac_sha256(password, salt, iterations, dk_len),
+        crate::hash::pbkdf2::pbkdf2_hmac_sha256(password, salt, iterations, key_len),
     )
 }
 
@@ -243,8 +303,8 @@ fn pbkdf2_hmac_sha256<'py>(
 // =========================================================================
 
 #[pyfunction]
-fn base64_encode(data: &[u8]) -> PyResult<String> {
-    Ok(crate::encoding::base64::encode(data))
+fn base64_encode(data: &[u8]) -> String {
+    crate::encoding::base64::encode(data)
 }
 
 #[pyfunction]
@@ -320,7 +380,13 @@ fn rsa_sign<'py>(
 
 #[pyfunction]
 #[pyo3(signature = (message, signature, n, e, scheme="pss"))]
-fn rsa_verify(message: &[u8], signature: &[u8], n: &[u8], e: &[u8], scheme: &str) -> PyResult<bool> {
+fn rsa_verify(
+    message: &[u8],
+    signature: &[u8],
+    n: &[u8],
+    e: &[u8],
+    scheme: &str,
+) -> PyResult<bool> {
     Ok(crate::pubkey::rsa::verify(message, signature, n, e, scheme).is_ok())
 }
 
