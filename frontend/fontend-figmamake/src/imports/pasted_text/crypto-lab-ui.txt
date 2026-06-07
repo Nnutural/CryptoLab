@@ -1,0 +1,1199 @@
+You are building the frontend prototype and production-oriented UI for **CryptoLab（密码算法实验平台）**, an academic cryptography experiment platform for a BUPT secure programming / cryptography assignment.
+
+Before generating anything, read and follow the attached project documents in this priority order:
+
+1. `PAGES.md` — authoritative source for page routes, page structure, endpoint mapping, request/response examples, states, and “wow moments”.
+2. `OVERVIEW.md` — authoritative source for frontend architecture, design tokens, shared components, layout system, API strategy, and endpoint-to-page coverage.
+3. `FIGMA_PROMPTS.md` — authoritative source for the visual design system and detailed per-page UI prompts.
+4. `CLAUDE.md` — reference for repository structure, frontend coding constraints, and engineering conventions.
+5. `系统设计方案.md` — reference for the overall system architecture, security principles, algorithm scope, and project positioning.
+
+Use the installed skills as follows:
+
+* Use **ui-ux-pro-max** to establish the primary visual language, layout hierarchy, spacing, information density, and professional interface quality.
+* Use **emil-design-eng** for refined interaction details, micro-animations, transition timing, hover states, result reveal animations, and motion consistency.
+* Use **Anthropic frontend-design** to optimize frontend implementation quality, responsive layout, component structure, state handling, and maintainable UI code.
+
+## 1. Overall Goal
+
+Create a polished, interactive, production-oriented frontend for **CryptoLab**, not just static mockups.
+
+The app should look like:
+
+> GitHub-style engineering clarity + university laboratory professionalism + cryptography teaching visualization.
+
+It must avoid generic AI-generated SaaS visuals. Do not use cyberpunk styling, excessive gradients, dark admin dashboard patterns, glassmorphism, cartoon icons, 3D objects, neon glow, marketing landing-page aesthetics, or decorative clutter.
+
+The platform is an academic cryptography workbench that allows students and instructors to interact with 15 hand-written cryptographic algorithms through a clean Web UI.
+
+Core algorithm scope:
+
+* Symmetric encryption: AES, SM4, RC6
+* Modes: ECB, CBC, CTR, GCM
+* Hashes: SHA-1, SHA-224, SHA-256, SHA-384, SHA-512, SHA3-256, SHA3-512, RIPEMD-160
+* HMAC
+* PBKDF2
+* Encoding: Base64, UTF-8
+* Public key: RSA-1024, ECC-160, ECDSA
+* Security demos: ECB image leakage, ECDSA k reuse, RSA low exponent, PBKDF2 iteration impact
+* Capstone scenario: secure file transfer using RSA + AES-GCM + SHA-256 + ECDSA
+
+The frontend must remain compatible with the backend API described in the attached documents. All UI forms, request payloads, response displays, error states, and route names must match the documented API.
+
+## 2. Technical Target
+
+Generate a functional frontend prototype and clean UI code.
+
+Preferred stack:
+
+* Vue 3
+* Composition API
+* `<script setup lang="ts">`
+* TypeScript strict style
+* Vue Router 4
+* Pinia
+* Axios
+* Element Plus
+* @element-plus/icons-vue
+* ECharts / vue-echarts for charts and graphs
+* Vite-style project structure
+
+If Figma Make cannot directly generate Vue 3 code, generate a functionally equivalent prototype while preserving:
+
+* Vue-compatible component naming
+* Vue-compatible data model
+* Element Plus visual semantics
+* exact route names
+* exact API endpoint contracts
+* portable CSS variables / design tokens
+* clean separation between components, views, API layer, and store layer
+
+Do not hardcode backend business logic inside page components. Use a mock API layer only when necessary for preview, but keep all API functions named and shaped exactly according to the documented backend endpoints.
+
+## 3. Required Deliverables
+
+Create the following as a complete interactive app:
+
+1. A complete light-mode design system for CryptoLab.
+2. Authenticated app shell:
+
+   * fixed 64px header
+   * 220px left sidebar
+   * collapsible sidebar to 64px icon-only below 1200px
+   * scrollable main content area
+   * max content width 1200px
+3. Login and register page.
+4. Dashboard.
+5. Symmetric encryption workbench.
+6. Hash functions page.
+7. HMAC & PBKDF2 page.
+8. Encoding page.
+9. RSA cryptography page.
+10. ECC & ECDSA page.
+11. Key Store management page.
+12. Audit Logs page.
+13. Benchmark page.
+14. Security Demos page.
+15. Secure File Transfer scenario page.
+16. Shared component library with all documented components and their states.
+17. Mocked but API-compatible request/response flows.
+18. Responsive behavior for desktop, tablet, and narrow screens.
+19. Loading, empty, success, error, validation, and rate-limit states.
+20. Polished micro-interactions and educational “wow moments” on cryptography-specific pages.
+
+## 4. Visual Design System
+
+Use the following design tokens exactly unless the attached documents specify a more detailed version.
+
+Brand:
+
+* Product name: CryptoLab
+* Chinese subtitle: 密码算法实验平台
+* Brand tone: technical but approachable
+* Logo: shield + lock keyhole + subtle binary 0/1 pattern
+* Overall impression: academic laboratory, secure engineering, cryptography education
+
+Color tokens:
+
+* `--cl-primary: #409EFF`
+* `--cl-primary-light: #ECF5FF`
+* `--cl-success: #67C23A`
+* `--cl-warning: #E6A23C`
+* `--cl-danger: #F56C6C`
+* `--cl-info: #909399`
+* `--cl-bg-page: #F5F7FA`
+* `--cl-bg-card: #FFFFFF`
+* `--cl-bg-code: #FAFAFA`
+* `--cl-border: #DCDFE6`
+* `--cl-text-primary: #303133`
+* `--cl-text-regular: #606266`
+* `--cl-text-secondary: #909399`
+* `--cl-crypto-encrypt: #409EFF`
+* `--cl-crypto-decrypt: #67C23A`
+* `--cl-crypto-sign: #9B59B6`
+
+Typography:
+
+* Page title: Inter / Microsoft YaHei, 24px, 700
+* Section title: Inter / Microsoft YaHei, 18px, 600
+* Body: Inter / Microsoft YaHei, 14px, 400
+* Caption: Inter / Microsoft YaHei, 12px, 400
+* Badge: Inter, 11px, 600
+* Code / Hex / Base64: JetBrains Mono or Consolas, 13px, 400
+
+Spacing:
+
+* 8px grid
+* Card padding: 16px
+* Section gap: 24px
+* Page margin: 32px
+* Compact but not crowded
+
+Radius:
+
+* Inputs / buttons: 4px
+* Cards / dialogs: 8px
+* Dashboard feature cards: 12px
+* Tags / badges: 20px
+
+Shadow:
+
+* Card rest: `0 1px 4px rgba(0,0,0,0.08)`
+* Card hover: `0 4px 12px rgba(0,0,0,0.10)`
+* Modal / floating panel: `0 8px 24px rgba(0,0,0,0.12)`
+
+Motion:
+
+* Card hover lift: 200ms ease-out
+* Page transition: 300ms ease-in-out fade
+* Result reveal: 400ms cubic-bezier(.34,1.56,.64,1)
+* Copy flash: 150ms ease, icon changes to green check
+* Dashboard metric count-up: 800ms
+* Staggered cards: 50ms delay between cards
+* Avoid distracting animation. Motion must support comprehension.
+
+Important:
+
+* Light mode only for authenticated pages.
+* Login page may use a dark gradient background as specified.
+* Do not make the global navigation dark.
+* Use shadows, subtle borders, spacing, and rounded cards to separate sections.
+* Avoid harsh straight-line section dividers unless used inside tables.
+
+## 5. Authenticated Shell
+
+Create a reusable shell layout:
+
+Header:
+
+* 64px fixed height
+* Left: CryptoLab logo and product name
+* Center or left-center: optional breadcrumb / global search placeholder “Search algorithms, keys, logs…”
+* Right: user menu, role badge, logout button
+* Use light background, not dark.
+
+Sidebar:
+
+* width 220px expanded
+* width 64px collapsed
+* fixed on the left
+* grouped navigation:
+
+  * Algorithms: Symmetric, Hash, HMAC & PBKDF2, Encoding
+  * Public Key: RSA, ECC & ECDSA
+  * Management: Key Store, Audit Logs, Benchmark
+  * Labs: Security Demos, Secure File Transfer
+* Active route uses `#ECF5FF` background and `#409EFF` text/icon.
+* Sidebar icons should be simple line icons from Element Plus style.
+
+Main:
+
+* page background `#F5F7FA`
+* centered content max width 1200px
+* 32px page margin
+* independent scroll
+* footer text: “Built with Rust + Python | CryptoLab 2026”
+
+## 6. Shared Components
+
+Design and implement these shared components. They must be reusable across pages.
+
+1. `CryptoCard`
+
+   * bordered card
+   * title, subtitle, icon
+   * optional collapse
+   * optional loading skeleton
+   * header-extra slot
+
+2. `HexViewer`
+
+   * monospace hex display
+   * copy button
+   * line numbers
+   * collapsible after max lines
+   * optional byte-range highlighting
+   * optional compare mode with diff coloring
+   * green = match / unchanged
+   * red = changed / risky
+
+3. `Base64Viewer`
+
+   * similar to HexViewer
+   * for Base64 strings
+   * copy button
+   * wrapped long text
+   * optional validation status
+
+4. `AlgorithmSelector`
+
+   * dropdown or segmented controls
+   * supports algorithm, mode, padding
+   * used on symmetric, hash, benchmark, demos where appropriate
+
+5. `KeyIdPicker`
+
+   * dropdown listing user keys
+   * displays truncated UUID, algorithm, type, label, creation date
+   * filters by key type and algorithm
+   * uses `GET /api/v1/keys`
+   * empty state: “No keys found — generate one first”
+
+6. `OperationTimer`
+
+   * circular badge
+   * displays duration in ms
+   * green below 100ms
+   * yellow below 1000ms
+   * red above 1000ms
+   * pops in after successful response
+
+7. `StatusBanner`
+
+   * warning / danger / info banner
+   * used for security demos and PBKDF2 low-iteration warning
+
+8. `FlowDiagram`
+
+   * connected node diagram
+   * numbered steps with arrows
+   * each node shows algorithm and status
+   * used for Secure File Transfer and demos
+
+9. `InputPanel`
+
+   * standardized left-side form container
+   * form fields, submit button, reset button
+   * disabled state during loading
+
+10. `OutputPanel`
+
+* standardized right-side result container
+* states: empty, loading, success, error
+* empty: ghost illustration + “Run an operation to see results”
+* loading: skeleton shimmer
+* success: animated reveal
+* error: red border + error code badge + message
+
+11. `CopyButton`
+
+* small icon button
+* copy-to-clipboard
+* flashes green checkmark for 1.5s after copy
+
+12. `AuditTable`
+
+* paginated operation log table
+* filters
+* compact embedded mode and full page mode
+* columns: Trace ID, Operation, Algorithm, Key ID, Status, Duration, Timestamp
+
+13. `KeygenButton`
+
+* opens key-generation dialog
+* supports symmetric, RSA, ECC
+* returns key_id or key pair ids
+* shows success feedback
+
+14. `ComparisonToggle`
+
+* animated pill toggle
+* supports Encrypt/Decrypt and Sign/Verify
+* active side uses primary color
+
+## 7. API Contract Requirements
+
+Use this uniform API response model:
+
+```ts
+interface APIResponse<T> {
+  code: number
+  message: string
+  data: T | null
+  trace_id?: string
+  timestamp?: string
+}
+```
+
+Axios behavior:
+
+* base URL: `/api`
+* dev proxy target: `http://localhost:8000`
+* request interceptor injects `Authorization: Bearer <token>` from auth store
+* response interceptor unwraps `data` when `code === 1000`
+* typed error is thrown when `code !== 1000`
+* `401`, `4001`, or `4002` clears token and redirects to `/login`
+* never call axios directly inside views; use `src/api/*`
+
+Business code display:
+
+* 1000 success
+* 2xxx client parameter error
+* 3xxx cryptographic operation failure
+* 4xxx auth / permission / rate limit
+* 5xxx server error
+* show error code badges inside OutputPanel
+
+Endpoint coverage must include all documented endpoints:
+
+Auth:
+
+* `POST /api/v1/auth/register`
+* `POST /api/v1/auth/login`
+* `POST /api/v1/auth/logout`
+* `GET /api/v1/auth/me`
+
+Symmetric:
+
+* `POST /api/v1/symmetric/keygen`
+* `POST /api/v1/symmetric/{algo}/encrypt`
+* `POST /api/v1/symmetric/{algo}/decrypt`
+
+Hash / HMAC / PBKDF2:
+
+* `POST /api/v1/hash/{algo}`
+* `POST /api/v1/hash/hmac/{algo}`
+* `POST /api/v1/hash/pbkdf2`
+
+Encoding:
+
+* `POST /api/v1/encoding/base64/{op}`
+
+RSA:
+
+* `POST /api/v1/pubkey/rsa/keygen`
+* `POST /api/v1/pubkey/rsa/encrypt`
+* `POST /api/v1/pubkey/rsa/decrypt`
+* `POST /api/v1/pubkey/rsa/sign`
+* `POST /api/v1/pubkey/rsa/verify`
+
+ECC / ECDSA:
+
+* `POST /api/v1/pubkey/ecc/keygen`
+* `POST /api/v1/pubkey/ecdsa/sign`
+* `POST /api/v1/pubkey/ecdsa/verify`
+
+Key Store:
+
+* `GET /api/v1/keys`
+* `GET /api/v1/keys/{key_id}/public`
+* `DELETE /api/v1/keys/{key_id}`
+
+Audit:
+
+* `GET /api/v1/audit/logs`
+
+Benchmark:
+
+* `GET /api/v1/benchmark/{algo}`
+
+Demos:
+
+* `POST /api/v1/demos/ecb_image_leak`
+* `POST /api/v1/demos/ecdsa_k_reuse`
+* `POST /api/v1/demos/rsa_low_exponent`
+* `POST /api/v1/demos/pbkdf2_iteration_impact`
+
+Scenario:
+
+* `POST /api/v1/scenarios/secure_file_transfer/send`
+* `POST /api/v1/scenarios/secure_file_transfer/receive`
+
+## 8. Pages
+
+### Page 1 — Login & Register `/login`
+
+Full viewport login/register page.
+
+Layout:
+
+* dark gradient background `#1a1a2e → #16213e`
+* subtle floating cryptographic symbols: lock, key, shield, binary digits
+* centered white auth card, width 400px, radius 8px, heavy shadow
+* logo icon 48px
+* title: CryptoLab
+* subtitle: 密码算法实验平台
+* Element Plus style tabs: Login / Register
+* Login fields:
+
+  * username input with User icon
+  * password input with Lock icon
+  * primary full-width Login button
+* Register fields:
+
+  * username
+  * password
+  * helper text: Password must be at least 8 characters
+  * primary Register button
+* footer: Powered by Rust + Python | BUPT 2026
+
+States:
+
+* default
+* validation error
+* loading
+* login error: Invalid credentials
+* success: green flash border
+* rate limited: countdown button “Try again in 45s”
+
+Wow moment:
+
+* password typing cipher effect: each typed character briefly flashes as hex, such as `a → 0x61`, then masks to bullet.
+
+### Page 2 — Dashboard `/dashboard`
+
+Authenticated landing page.
+
+Sections:
+
+* welcome banner: “Welcome back, alice”
+* role badge
+* last login text
+* four metric cards:
+
+  * 15 Algorithms Available
+  * 24 Keys Stored
+  * 156 Operations Today
+  * 0.8ms Avg Latency
+* algorithm catalog in 3-column feature card grid:
+
+  * Symmetric Encryption — AES · SM4 · RC6
+  * Hash Functions — SHA-1/256/3 · RIPEMD-160
+  * Encoding — Base64 · UTF-8
+  * RSA Cryptography — 1024-bit
+  * ECC & ECDSA — secp160r1
+  * Key Store — KEK-wrapped storage
+  * Security Demos — 4 attack simulations
+  * Secure Transfer — RSA + AES + ECDSA
+  * Benchmark — throughput per algorithm
+* recent activity table:
+
+  * Time
+  * Operation
+  * Algorithm
+  * Duration
+* link: View all audit logs →
+
+Motion:
+
+* stat counters count up from 0
+* lock icon unlocks when algorithm count completes
+* feature cards fade in with staggered 50ms cascade
+* hover: slight scale and shadow lift
+
+### Page 3 — Symmetric Encryption `/symmetric`
+
+Workbench for AES / SM4 / RC6.
+
+Header:
+
+* title: Symmetric Encryption
+* subtitle: AES / SM4 / RC6 — Block cipher workbench
+
+Toolbar:
+
+* algorithm dropdown: AES / SM4 / RC6
+* mode dropdown: ECB / CBC / CTR / GCM
+* padding dropdown: PKCS7 / Zero / X923 / None
+* ComparisonToggle: Encrypt / Decrypt
+
+Main:
+
+* two-column split: 45% input / 55% output
+
+InputPanel:
+
+* KeyIdPicker + Generate Key button
+* IV hex input + Random button, shown for CBC / CTR / GCM
+* AAD Base64 input, shown only for GCM
+* Plaintext textarea in Encrypt mode
+* Ciphertext Base64 textarea in Decrypt mode
+* primary Encrypt or success Decrypt button
+
+OutputPanel:
+
+* empty state
+* Base64Viewer for ciphertext
+* HexViewer for hex representation
+* OperationTimer
+* algorithm + mode label
+* error state with code badge
+
+States:
+
+* empty
+* key generated
+* GCM mode selected
+* encrypt result
+* decrypt result
+* error: GCM authentication tag mismatch, code 3002
+
+Wow moment:
+
+* collapsible “Compare Modes” section
+* four mini HexViewers side by side: ECB / CBC / CTR / GCM
+* ECB repeating blocks highlighted red
+
+### Page 4 — Hash Functions `/hash`
+
+Hash computation page.
+
+Input:
+
+* large textarea
+* character count
+* algorithm checkbox grid:
+
+  * SHA-1, SHA-224, SHA-256, SHA-384
+  * SHA-512, SHA3-256, SHA3-512, RIPEMD-160
+* default checked: SHA-1, SHA-256, SHA3-256
+* Compute Hashes button
+
+Results:
+
+* one CryptoCard per selected algorithm
+* HexViewer with digest
+* digest length label
+* CopyButton
+* comparison summary when 2+ algorithms selected
+
+States:
+
+* empty
+* ready
+* loading
+* success
+* partial failure
+* avalanche comparison
+* network error
+
+Wow moment:
+
+* avalanche visualization
+* previous hash dimmed
+* new hash below
+* byte-level diff coloring
+* changed bytes red
+* unchanged bytes green
+* percentage changed badge
+
+### Page 5 — HMAC & PBKDF2 `/hmac-pbkdf2`
+
+Use tabs:
+
+* HMAC
+* PBKDF2
+
+HMAC tab:
+
+* algorithm selector
+* key input
+* message textarea
+* Compute HMAC button
+* HexViewer result
+* OperationTimer
+* copy action
+
+PBKDF2 tab:
+
+* password input
+* salt input
+* iterations number input
+* logarithmic slider from 1,000 to 1,000,000
+* key length input 1–64, default 32
+* Derive Key button
+* HexViewer for derived key
+* labels for iterations and key length
+* warning StatusBanner if iterations below 100,000
+* OperationTimer
+
+Wow moment:
+
+* PBKDF2 slider displays real-time timing estimate
+* actual time appears next to estimated time after computation
+
+### Page 6 — Encoding `/encoding`
+
+Base64 and UTF-8 encoding page.
+
+Layout:
+
+* mirror layout with two equal textareas
+* left: Plain Text
+* right: Base64
+* circular swap button between them
+* Encode → button below left
+* ← Decode button below right
+* character counts
+* size comparison bar:
+
+  * Original bytes
+  * Encoded bytes
+  * overhead ratio
+* byte visualization:
+
+  * ASCII byte grid on plain text side
+  * Base64 6-bit grouping visualization on Base64 side
+* UTF-8 section below, disabled with Coming Soon tag
+
+States:
+
+* empty
+* ready to encode
+* encoded result
+* ready to decode
+* invalid Base64 error
+* UTF-8 disabled
+
+Wow moment:
+
+* hovering a Base64 character highlights the corresponding source bytes.
+
+### Page 7 — RSA Cryptography `/rsa`
+
+RSA-1024 keygen, encryption/decryption, signing/verification.
+
+Header:
+
+* RSA Cryptography
+* 1024-bit key generation, encryption & signing
+
+Sections:
+
+* Key generation bar:
+
+  * Generate RSA-1024 Key Pair button
+  * label input
+  * active private key ID
+  * active public key ID
+* tabs or segmented mode:
+
+  * Encrypt / Decrypt
+  * Sign / Verify
+
+Encrypt:
+
+* plaintext input
+* public key picker
+* ciphertext hex output
+
+Decrypt:
+
+* ciphertext hex input
+* private key picker
+* plaintext output
+
+Sign:
+
+* message input
+* private key picker
+* signature hex output
+
+Verify:
+
+* message input
+* signature hex input
+* public key picker
+* valid/invalid result
+
+Public key display:
+
+* `n_hex`
+* `e_hex`
+* HexViewer
+
+States:
+
+* no key
+* key generated
+* encrypt result
+* decrypt result
+* sign result
+* verify valid
+* verify invalid
+* wrong key type error
+
+Wow moment:
+
+* key generation visualizes p, q, n, e, d as a compact flow diagram without exposing private material in unsafe ways.
+
+### Page 8 — ECC & ECDSA `/ecc`
+
+ECC key generation and ECDSA sign/verify page.
+
+Header:
+
+* ECC & ECDSA
+* secp160r1 key generation and digital signature
+
+Sections:
+
+* Generate ECC Key Pair button
+* curve: secp160r1
+* key picker
+* public point display:
+
+  * qx_hex
+  * qy_hex
+* curve plot card
+* Sign / Verify toggle
+
+Sign:
+
+* message input
+* private key picker
+* output r and s in HexViewer
+
+Verify:
+
+* message input
+* signature r
+* signature s
+* public key picker
+* valid/invalid badge
+
+States:
+
+* no keys
+* key generated
+* sign result
+* verify valid
+* verify invalid
+* wrong key type error
+
+Wow moment:
+
+* animated dot traces from generator point G to ephemeral point kG on the elliptic curve plot when signing.
+
+### Page 9 — Key Store `/keys`
+
+Key management page.
+
+Header:
+
+* Key Store
+* Manage your cryptographic keys
+
+Toolbar:
+
+* key type filter
+* algorithm filter
+* search input by label or key ID
+* key count badge
+
+Graph:
+
+* ECharts force-directed key relationship graph
+* symmetric keys as blue single nodes
+* RSA public/private pairs as connected green/red nodes
+* ECC public/private pairs as diamond nodes
+* hover highlights paired key
+
+Table:
+
+* Key ID truncated + copy icon
+* Type colored tag
+* Algorithm
+* Label
+* Paired Key ID
+* Created At
+* pagination 10 per page
+* row click opens detail panel
+
+Detail panel:
+
+* slide-in from right, 400px wide
+* full key ID
+* type
+* algorithm
+* label
+* paired key link
+* dates
+* public material section for public keys
+* revoke key button with confirmation
+
+States:
+
+* loading skeleton
+* empty vault illustration
+* loaded
+* detail panel open
+* revoke confirmation
+* revoke success
+* export public material loading
+
+### Page 10 — Audit Logs `/audit`
+
+Audit log viewer.
+
+Header:
+
+* Audit Logs
+* Cryptographic operation history
+
+Top:
+
+* ECharts timeline heatmap
+* operation density by hour for past 7 days
+* click cell filters table
+
+Filter bar:
+
+* algorithm dropdown
+* since date picker
+* until date picker
+* status dropdown
+* search button
+* reset link
+
+Table:
+
+* AuditTable full mode
+* trace ID
+* user
+* operation
+* algorithm
+* key ID
+* status
+* duration
+* timestamp
+* expandable row for details
+
+States:
+
+* loading
+* loaded
+* empty
+* filtered
+* error
+
+Wow moment:
+
+* clicking a heatmap cell smoothly filters and scrolls to related log rows.
+
+### Page 11 — Benchmark `/benchmark`
+
+Algorithm throughput benchmark page.
+
+Header:
+
+* Benchmark
+* Measure algorithm throughput and latency
+
+Controls:
+
+* algorithm multi-select
+* data size selector
+* iterations selector
+* Run Benchmark button
+
+Visualization:
+
+* ECharts horizontal bar chart
+* throughput MB/s
+* latency ms
+* table below:
+
+  * Algorithm
+  * Data Size
+  * Iterations
+  * Total Time
+  * Throughput
+  * ns/op
+
+States:
+
+* empty
+* running
+* complete
+* partial failure
+* error
+
+Wow moment:
+
+* live racing bars
+* each bar grows as benchmark completes
+* final chart auto-sorts by throughput with smooth reorder animation
+
+### Page 12 — Security Demos `/demos`
+
+Educational vulnerability demos.
+
+Header:
+
+* Security Demos
+* Cryptographic vulnerability demonstrations
+
+Tabs:
+
+1. ECB Image Leak
+2. ECDSA k-Reuse
+3. RSA Low Exponent
+4. PBKDF2 Iteration Impact
+
+Each tab:
+
+* vulnerability explanation
+* input panel
+* Run Demo button
+* StatusBanner warning
+* result panel
+* code / formula / mitigation card
+
+ECB Image Leak:
+
+* upload image
+* key input or generated key
+* results: original image, ECB encrypted image, CBC encrypted image
+* duplicate block ratio
+* red warning badge
+
+ECDSA k-Reuse:
+
+* message1
+* message2
+* curve
+* result: reused k, two signatures, recovered private key, recovery match
+
+RSA Low Exponent:
+
+* message
+* bits
+* result: n, e, ciphertext, cube root recovery, recovered plaintext
+
+PBKDF2 Iteration Impact:
+
+* password
+* salt
+* compare 1k / 10k / 100k / 1M
+* chart of time and resistance
+
+Wow moment:
+
+* ECB penguin reveal animation:
+
+  * reveal original, ECB, CBC images left-to-right
+  * ECB image remains visually recognizable
+  * duplicate blocks pulse in red
+
+### Page 13 — Secure File Transfer `/scenarios`
+
+Capstone scenario page.
+
+Header:
+
+* Secure File Transfer
+* RSA + AES-GCM + SHA-256 + ECDSA combined
+
+Top FlowDiagram:
+
+1. RSA PubKey
+2. Generate AES Key
+3. RSA Encrypt Key
+4. AES-GCM Encrypt
+5. SHA-256 Hash
+6. ECDSA Sign
+7. Send Envelope
+
+Tabs:
+
+* Send
+* Receive
+
+Send tab:
+
+* key selection:
+
+  * receiver RSA public key
+  * sender ECDSA private key
+* file upload
+* optional raw key inputs
+* Send button
+* output envelope viewer
+* sender summary:
+
+  * encrypted size
+  * signature time
+  * total time
+
+Receive tab:
+
+* envelope input
+* receiver RSA private key
+* sender ECDSA public key
+* Receive button
+* output plaintext
+* verification result:
+
+  * signature_valid
+  * tag_valid
+* duration timer
+
+Wow moment:
+
+* FlowDiagram animates each cryptographic step as the operation progresses.
+* When receive succeeds, both “Signature Valid” and “GCM Tag Valid” badges light up.
+
+## 9. Interaction and State Rules
+
+For every page:
+
+* include loading state
+* include empty state
+* include success state
+* include API error state
+* include validation error state when inputs are invalid
+* preserve partial successful results when only part of a multi-call operation fails
+* show business error code when present
+* show trace_id in advanced details or tooltip when available
+* disable submit buttons during loading
+* never silently fail
+
+For forms:
+
+* use Element Plus style validation
+* use inline helper text
+* use placeholder examples
+* use consistent button placement
+* primary operation button should be visually obvious
+* destructive actions require confirmation
+
+For output:
+
+* use HexViewer for hex
+* use Base64Viewer for Base64
+* use OperationTimer for duration
+* use StatusBanner for warnings
+* use CopyButton on all long outputs
+* wrap long cryptographic data safely
+
+## 10. Mock Data Requirements
+
+Use realistic but fake sample data:
+
+* username: alice
+* role: user
+* key IDs as UUID-like strings
+* algorithms: AES-GCM, RSA-1024, secp160r1, SHA-256
+* durations:
+
+  * AES-GCM: 0.42ms
+  * SHA-256: 0.08ms
+  * RSA keygen: 234.5ms
+  * ECDSA sign: 3.8ms
+* sample plaintext: “Hello, CryptoLab!”
+* sample Base64: `SGVsbG8sIENyeXB0b0xhYiE=`
+* sample hash: use realistic-length hex strings
+* sample error code: 3002 for GCM authentication tag mismatch
+* sample auth error: 4001 Invalid credentials
+* sample rate-limit error: 4029
+
+Do not expose real secrets or suggest insecure practices as normal workflow. Security demos may show insecure practices only as clearly labeled demonstrations with mitigation guidance.
+
+## 11. Code Structure Requirements
+
+Use or generate a structure similar to:
+
+```text
+src/
+  main.ts
+  App.vue
+  router/
+    index.ts
+  stores/
+    auth.ts
+    keys.ts
+  api/
+    client.ts
+    auth.ts
+    symmetric.ts
+    hash.ts
+    encoding.ts
+    pubkey.ts
+    keys.ts
+    audit.ts
+    benchmark.ts
+    demos.ts
+    scenarios.ts
+  components/
+    CryptoCard.vue
+    HexViewer.vue
+    Base64Viewer.vue
+    AlgorithmSelector.vue
+    KeyIdPicker.vue
+    OperationTimer.vue
+    StatusBanner.vue
+    FlowDiagram.vue
+    InputPanel.vue
+    OutputPanel.vue
+    CopyButton.vue
+    AuditTable.vue
+    KeygenButton.vue
+    ComparisonToggle.vue
+  layouts/
+    AuthenticatedShell.vue
+  views/
+    LoginView.vue
+    DashboardView.vue
+    SymmetricView.vue
+    HashView.vue
+    HmacPbkdf2View.vue
+    EncodingView.vue
+    RsaView.vue
+    EccView.vue
+    KeysView.vue
+    AuditView.vue
+    BenchmarkView.vue
+    DemosView.vue
+    ScenariosView.vue
+  styles/
+    tokens.css
+    global.css
+```
+
+Coding rules:
+
+* no direct axios calls in views
+* all API calls go through `src/api`
+* all visual tokens go through CSS variables
+* all route names must match documented routes
+* components must be reusable
+* do not mix mock data and API contracts in a confusing way
+* keep mock mode clearly separable from real API mode
+
+## 12. Quality Bar
+
+The final result should satisfy these criteria:
+
+* It feels like a real cryptography teaching platform.
+* It is suitable for a university course demonstration.
+* It can be shown in a project defense or report screenshots.
+* It avoids generic AI dashboard aesthetics.
+* It respects Element Plus design language while adding CryptoLab identity.
+* It has strong educational visualizations for cryptographic concepts.
+* It is easy to later connect to the completed FastAPI backend.
+* Every documented backend endpoint has a corresponding UI location.
+* The interface is compact, logical, and formally organized.
+* The motion design is subtle, consistent, and purposeful.
+
+Now generate the complete CryptoLab frontend prototype and code according to the attached documents and the instructions above.

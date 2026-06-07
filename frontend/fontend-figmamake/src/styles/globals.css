@@ -1,0 +1,88 @@
+:root {
+  /* CryptoLab brand tokens */
+  --cl-primary: #409EFF;
+  --cl-primary-hover: #66B1FF;
+  --cl-primary-light: #ECF5FF;
+  --cl-primary-dark: #1D6FE0;
+  --cl-success: #67C23A;
+  --cl-warning: #E6A23C;
+  --cl-danger: #F56C6C;
+  --cl-info: #909399;
+  --cl-bg-page: #F5F7FA;
+  --cl-bg-card: #FFFFFF;
+  --cl-bg-code: #FAFAFA;
+  --cl-border: #DCDFE6;
+  --cl-border-light: #EBEEF5;
+  --cl-text-primary: #303133;
+  --cl-text-regular: #606266;
+  --cl-text-secondary: #909399;
+  --cl-text-placeholder: #C0C4CC;
+  --cl-crypto-encrypt: #409EFF;
+  --cl-crypto-decrypt: #67C23A;
+  --cl-crypto-sign: #9B59B6;
+
+  /* Easing */
+  --cl-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --cl-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --cl-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+button {
+  transition: transform 160ms var(--cl-ease-out);
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.22); }
+
+/* Fade enter */
+@keyframes cl-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.cl-fade-up { animation: cl-fade-up 320ms var(--cl-ease-out) both; }
+
+@keyframes cl-scale-pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.cl-scale-pop { animation: cl-scale-pop 320ms var(--cl-ease-spring) both; }
+
+@keyframes cl-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+.cl-shake { animation: cl-shake 380ms var(--cl-ease-out); }
+
+@keyframes cl-pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(64,158,255,0.5); }
+  70% { box-shadow: 0 0 0 12px rgba(64,158,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(64,158,255,0); }
+}
+.cl-pulse { animation: cl-pulse-ring 1.6s ease-out infinite; }
+
+@keyframes cl-particle-drift {
+  0% { transform: translate(0, 0) rotate(0); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translate(var(--dx), var(--dy)) rotate(var(--dr)); opacity: 0; }
+}
+.cl-particle { animation: cl-particle-drift var(--dur, 14s) linear infinite; }
+
+@keyframes cl-marquee-bar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.cl-marquee-bar { animation: cl-marquee-bar 1.4s linear infinite; }
