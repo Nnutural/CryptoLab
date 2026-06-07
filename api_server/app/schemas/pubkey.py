@@ -4,100 +4,109 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
-RsaPadding = Literal["pkcs1v15", "oaep"]
-RsaSignScheme = Literal["pkcs1v15", "pss"]
 EccCurve = Literal["secp160r1"]
 
 
-# ----- RSA -----
-
 class RsaKeygenRequest(BaseModel):
-    bits: int = Field(default=1024, ge=1024, le=4096)
+    bits: Literal[1024] = 1024
     e: int = Field(default=65537, ge=65537)
-    label: str | None = None
+
+    @field_validator("e")
+    @classmethod
+    def exponent_must_be_odd(cls, value: int) -> int:
+        if value % 2 == 0:
+            raise ValueError("RSA exponent must be odd")
+        return value
 
 
-class RsaKeyResult(BaseModel):
-    key_id: str
-    n_b64: str
-    e_b64: str
-    # Private key bytes are NOT echoed; consumers fetch them through key_service.
+class RsaKeygenResponse(BaseModel):
+    n_hex: str
+    e_hex: str
+    d_hex: str
+    p_hex: str
+    q_hex: str
+    warning: str
 
 
 class RsaEncryptRequest(BaseModel):
-    key_id: str
-    plaintext_b64: str
-    padding: RsaPadding = "oaep"
+    plaintext: str
+    n_hex: str
+    e_hex: str
+
+
+class RsaEncryptResponse(BaseModel):
+    ciphertext_hex: str
 
 
 class RsaDecryptRequest(BaseModel):
-    key_id: str
-    ciphertext_b64: str
-    padding: RsaPadding = "oaep"
+    ciphertext_hex: str
+    n_hex: str
+    d_hex: str
+    p_hex: str
+    q_hex: str
 
 
-class RsaEncryptResult(BaseModel):
-    output_b64: str
-    duration_ms: float
+class RsaDecryptResponse(BaseModel):
+    plaintext: str
 
 
 class RsaSignRequest(BaseModel):
-    key_id: str
-    message_b64: str
-    scheme: RsaSignScheme = "pss"
+    message: str
+    n_hex: str
+    d_hex: str
+    p_hex: str
+    q_hex: str
 
 
-class RsaSignResult(BaseModel):
-    signature_b64: str
-    duration_ms: float
+class RsaSignResponse(BaseModel):
+    signature_hex: str
 
 
 class RsaVerifyRequest(BaseModel):
-    key_id: str
-    message_b64: str
-    signature_b64: str
-    scheme: RsaSignScheme = "pss"
+    message: str
+    signature_hex: str
+    n_hex: str
+    e_hex: str
 
 
-class RsaVerifyResult(BaseModel):
+class RsaVerifyResponse(BaseModel):
     valid: bool
-    duration_ms: float
 
-
-# ----- ECC / ECDSA -----
 
 class EccKeygenRequest(BaseModel):
     curve: EccCurve = "secp160r1"
-    label: str | None = None
 
 
-class EccKeyResult(BaseModel):
-    key_id: str
+class EccKeygenResponse(BaseModel):
     curve: EccCurve
-    px_b64: str
-    py_b64: str
+    d_hex: str
+    qx_hex: str
+    qy_hex: str
 
 
 class EcdsaSignRequest(BaseModel):
-    key_id: str
-    message_b64: str
+    message: str
+    d_hex: str
+    curve: EccCurve = "secp160r1"
 
 
-class EcdsaSignResult(BaseModel):
-    r_b64: str
-    s_b64: str
-    duration_ms: float
+class EcdsaSignResponse(BaseModel):
+    r_hex: str
+    s_hex: str
+    curve: str
 
 
 class EcdsaVerifyRequest(BaseModel):
-    key_id: str
-    message_b64: str
-    r_b64: str
-    s_b64: str
+    message: str
+    r_hex: str
+    s_hex: str
+    qx_hex: str
+    qy_hex: str
+    curve: EccCurve = "secp160r1"
 
 
-class EcdsaVerifyResult(BaseModel):
+class EcdsaVerifyResponse(BaseModel):
     valid: bool
-    duration_ms: float
+    curve: str

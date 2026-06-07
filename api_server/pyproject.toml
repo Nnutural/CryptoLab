@@ -71,4 +71,7 @@ disallow_untyped_decorators = false
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers -m 'not slow'"
+markers = [
+    "slow: slow integration/performance checks skipped by default",
+]

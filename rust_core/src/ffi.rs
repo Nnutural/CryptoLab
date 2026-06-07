@@ -52,6 +52,12 @@ pub fn register(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(utf8_decode, m)?)?;
 
     // ----- public-key -----
+    m.add_function(wrap_pyfunction!(rsa_generate_keypair, m)?)?;
+    m.add_function(wrap_pyfunction!(rsa_encrypt_oaep, m)?)?;
+    m.add_function(wrap_pyfunction!(rsa_decrypt_oaep, m)?)?;
+    m.add_function(wrap_pyfunction!(rsa_sign_pss, m)?)?;
+    m.add_function(wrap_pyfunction!(rsa_verify_pss, m)?)?;
+    m.add_function(wrap_pyfunction!(ecc_generate_keypair, m)?)?;
     m.add_function(wrap_pyfunction!(rsa_keygen, m)?)?;
     m.add_function(wrap_pyfunction!(rsa_encrypt, m)?)?;
     m.add_function(wrap_pyfunction!(rsa_decrypt, m)?)?;
@@ -117,69 +123,73 @@ fn aes_decrypt<'py>(
 
 /// SM4 encrypt — modes: ECB / CBC / CTR.
 #[pyfunction]
-#[pyo3(signature = (plaintext, key, mode, iv=None, padding="pkcs7"))]
+#[pyo3(signature = (plaintext, key, mode, iv=None, aad=None, padding="pkcs7"))]
 fn sm4_encrypt<'py>(
     py: Python<'py>,
     plaintext: &[u8],
     key: &[u8],
     mode: &str,
     iv: Option<&[u8]>,
+    aad: Option<&[u8]>,
     padding: &str,
 ) -> PyResult<&'py PyBytes> {
     to_pybytes(
         py,
-        crate::symmetric::sm4::encrypt_dispatch(plaintext, key, mode, iv, padding),
+        crate::symmetric::sm4::encrypt_dispatch(plaintext, key, mode, iv, aad, padding),
     )
 }
 
 /// SM4 decrypt.
 #[pyfunction]
-#[pyo3(signature = (ciphertext, key, mode, iv=None, padding="pkcs7"))]
+#[pyo3(signature = (ciphertext, key, mode, iv=None, aad=None, padding="pkcs7"))]
 fn sm4_decrypt<'py>(
     py: Python<'py>,
     ciphertext: &[u8],
     key: &[u8],
     mode: &str,
     iv: Option<&[u8]>,
+    aad: Option<&[u8]>,
     padding: &str,
 ) -> PyResult<&'py PyBytes> {
     to_pybytes(
         py,
-        crate::symmetric::sm4::decrypt_dispatch(ciphertext, key, mode, iv, padding),
+        crate::symmetric::sm4::decrypt_dispatch(ciphertext, key, mode, iv, aad, padding),
     )
 }
 
 /// RC6 encrypt — modes: ECB / CBC.
 #[pyfunction]
-#[pyo3(signature = (plaintext, key, mode, iv=None, padding="pkcs7"))]
+#[pyo3(signature = (plaintext, key, mode, iv=None, aad=None, padding="pkcs7"))]
 fn rc6_encrypt<'py>(
     py: Python<'py>,
     plaintext: &[u8],
     key: &[u8],
     mode: &str,
     iv: Option<&[u8]>,
+    aad: Option<&[u8]>,
     padding: &str,
 ) -> PyResult<&'py PyBytes> {
     to_pybytes(
         py,
-        crate::symmetric::rc6::encrypt_dispatch(plaintext, key, mode, iv, padding),
+        crate::symmetric::rc6::encrypt_dispatch(plaintext, key, mode, iv, aad, padding),
     )
 }
 
 /// RC6 decrypt.
 #[pyfunction]
-#[pyo3(signature = (ciphertext, key, mode, iv=None, padding="pkcs7"))]
+#[pyo3(signature = (ciphertext, key, mode, iv=None, aad=None, padding="pkcs7"))]
 fn rc6_decrypt<'py>(
     py: Python<'py>,
     ciphertext: &[u8],
     key: &[u8],
     mode: &str,
     iv: Option<&[u8]>,
+    aad: Option<&[u8]>,
     padding: &str,
 ) -> PyResult<&'py PyBytes> {
     to_pybytes(
         py,
-        crate::symmetric::rc6::decrypt_dispatch(ciphertext, key, mode, iv, padding),
+        crate::symmetric::rc6::decrypt_dispatch(ciphertext, key, mode, iv, aad, padding),
     )
 }
 
@@ -343,6 +353,12 @@ fn rsa_keygen(py: Python<'_>, bits: usize, e: u64) -> PyResult<PyObject> {
 }
 
 #[pyfunction]
+#[pyo3(signature = (bits=1024, e=65537))]
+fn rsa_generate_keypair(py: Python<'_>, bits: usize, e: u64) -> PyResult<PyObject> {
+    rsa_keygen(py, bits, e)
+}
+
+#[pyfunction]
 #[pyo3(signature = (plaintext, n, e, padding="oaep"))]
 fn rsa_encrypt<'py>(
     py: Python<'py>,
@@ -352,6 +368,16 @@ fn rsa_encrypt<'py>(
     padding: &str,
 ) -> PyResult<&'py PyBytes> {
     to_pybytes(py, crate::pubkey::rsa::encrypt(plaintext, n, e, padding))
+}
+
+#[pyfunction]
+fn rsa_encrypt_oaep<'py>(
+    py: Python<'py>,
+    plaintext: &[u8],
+    n: &[u8],
+    e: &[u8],
+) -> PyResult<&'py PyBytes> {
+    to_pybytes(py, crate::pubkey::rsa::encrypt(plaintext, n, e, "oaep"))
 }
 
 #[pyfunction]
@@ -367,6 +393,21 @@ fn rsa_decrypt<'py>(
 }
 
 #[pyfunction]
+fn rsa_decrypt_oaep<'py>(
+    py: Python<'py>,
+    ciphertext: &[u8],
+    n: &[u8],
+    d: &[u8],
+    p: &[u8],
+    q: &[u8],
+) -> PyResult<&'py PyBytes> {
+    to_pybytes(
+        py,
+        crate::pubkey::rsa::decrypt_oaep_crt(ciphertext, n, d, p, q),
+    )
+}
+
+#[pyfunction]
 #[pyo3(signature = (message, n, d, scheme="pss"))]
 fn rsa_sign<'py>(
     py: Python<'py>,
@@ -376,6 +417,18 @@ fn rsa_sign<'py>(
     scheme: &str,
 ) -> PyResult<&'py PyBytes> {
     to_pybytes(py, crate::pubkey::rsa::sign(message, n, d, scheme))
+}
+
+#[pyfunction]
+fn rsa_sign_pss<'py>(
+    py: Python<'py>,
+    message: &[u8],
+    n: &[u8],
+    d: &[u8],
+    p: &[u8],
+    q: &[u8],
+) -> PyResult<&'py PyBytes> {
+    to_pybytes(py, crate::pubkey::rsa::sign_pss_crt(message, n, d, p, q))
 }
 
 #[pyfunction]
@@ -390,6 +443,16 @@ fn rsa_verify(
     Ok(crate::pubkey::rsa::verify(message, signature, n, e, scheme).is_ok())
 }
 
+#[pyfunction]
+fn rsa_verify_pss(
+    message: &[u8],
+    signature: &[u8],
+    n: &[u8],
+    e: &[u8],
+) -> PyResult<bool> {
+    Ok(crate::pubkey::rsa::verify(message, signature, n, e, "pss").is_ok())
+}
+
 /// ECC key generation on `curve` (e.g. "secp160r1"). Returns `(d, px, py)`.
 #[pyfunction]
 #[pyo3(signature = (curve="secp160r1"))]
@@ -401,6 +464,12 @@ fn ecc_keygen(py: Python<'_>, curve: &str) -> PyResult<PyObject> {
         PyBytes::new(py, &pyc),
     );
     Ok(tup.into_py(py))
+}
+
+#[pyfunction]
+#[pyo3(signature = (curve="secp160r1"))]
+fn ecc_generate_keypair(py: Python<'_>, curve: &str) -> PyResult<PyObject> {
+    ecc_keygen(py, curve)
 }
 
 /// ECDSA sign. `k` is derived deterministically per RFC 6979 — the binding

@@ -1,41 +1,53 @@
-"""Symmetric encryption endpoints — AES / SM4 / RC6."""
+"""Symmetric encryption endpoints: AES / SM4 / RC6."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Path, Request
 
-from app.middleware.auth import get_current_user
-from app.models.user import User
+from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
 from app.schemas.common import APIResponse
 from app.schemas.symmetric import (
     SymmetricDecryptRequest,
+    SymmetricDecryptResponse,
     SymmetricEncryptRequest,
-    SymmetricResult,
+    SymmetricEncryptResponse,
 )
+from app.services import symmetric_service
 
 router = APIRouter()
 
-ALGO = Path(..., regex="^(aes|sm4|rc6)$", description="Algorithm name")
+ALGO = Path(..., pattern="^(aes|sm4|rc6)$", description="Algorithm name")
 
 
-@router.post("/{algo}/encrypt", response_model=APIResponse[SymmetricResult])
+@router.post("/{algo}/encrypt", response_model=APIResponse[SymmetricEncryptResponse])
 async def encrypt(
+    request: Request,
+    req: SymmetricEncryptRequest,
     algo: str = ALGO,
-    _req: SymmetricEncryptRequest | None = None,
-    _user: User = Depends(get_current_user),
-) -> APIResponse[SymmetricResult]:
+) -> APIResponse[SymmetricEncryptResponse]:
     """Encrypt plaintext with the chosen algorithm + mode + padding."""
-    raise NotImplementedError(
-        "services.symmetric_service.encrypt(algo, req, user) "
-        "→ wraps cryptolab_core.{aes,sm4,rc6}_encrypt"
-    )
+    result = await symmetric_service.encrypt(algo, req)
+    return _ok(request, result)
 
 
-@router.post("/{algo}/decrypt", response_model=APIResponse[SymmetricResult])
+@router.post("/{algo}/decrypt", response_model=APIResponse[SymmetricDecryptResponse])
 async def decrypt(
+    request: Request,
+    req: SymmetricDecryptRequest,
     algo: str = ALGO,
-    _req: SymmetricDecryptRequest | None = None,
-    _user: User = Depends(get_current_user),
-) -> APIResponse[SymmetricResult]:
+) -> APIResponse[SymmetricDecryptResponse]:
     """Decrypt ciphertext."""
-    raise NotImplementedError("services.symmetric_service.decrypt(algo, req, user)")
+    result = await symmetric_service.decrypt(algo, req)
+    return _ok(request, result)
+
+
+def _ok(
+    request: Request,
+    data: SymmetricEncryptResponse | SymmetricDecryptResponse,
+) -> APIResponse:
+    return APIResponse(
+        code=StatusCode.OK,
+        message=DEFAULT_MESSAGES[StatusCode.OK],
+        data=data,
+        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
+    )

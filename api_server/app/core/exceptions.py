@@ -42,11 +42,16 @@ def install_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def handle_validation(request: Request, exc: RequestValidationError) -> JSONResponse:
+        errors = exc.errors()
+        for error in errors:
+            ctx = error.get("ctx")
+            if isinstance(ctx, dict) and "error" in ctx:
+                ctx["error"] = str(ctx["error"])
         return _envelope(
             request,
             StatusCode.PARAM_MISSING,
             "Request validation failed",
-            data={"errors": exc.errors()},
+            data={"errors": errors},
             http_status=422,
         )
 

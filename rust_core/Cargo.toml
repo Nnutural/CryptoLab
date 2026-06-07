@@ -56,6 +56,7 @@ proptest = "1.4"
 default = []
 # Enable cross-checking against RustCrypto reference impls in tests.
 reference-validation = ["sha2"]
+slow-tests = []
 
 [profile.release]
 opt-level = 3

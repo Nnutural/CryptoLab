@@ -2,95 +2,121 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Request
 
-from app.middleware.auth import get_current_user
-from app.models.user import User
+from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
 from app.schemas.common import APIResponse
 from app.schemas.pubkey import (
     EccKeygenRequest,
-    EccKeyResult,
+    EccKeygenResponse,
     EcdsaSignRequest,
-    EcdsaSignResult,
+    EcdsaSignResponse,
     EcdsaVerifyRequest,
-    EcdsaVerifyResult,
+    EcdsaVerifyResponse,
     RsaDecryptRequest,
+    RsaDecryptResponse,
     RsaEncryptRequest,
-    RsaEncryptResult,
+    RsaEncryptResponse,
     RsaKeygenRequest,
-    RsaKeyResult,
+    RsaKeygenResponse,
     RsaSignRequest,
-    RsaSignResult,
+    RsaSignResponse,
     RsaVerifyRequest,
-    RsaVerifyResult,
+    RsaVerifyResponse,
 )
+from app.services import pubkey_service
 
 router = APIRouter()
 
 
-# ----- RSA -----
-
-@router.post("/rsa/keygen", response_model=APIResponse[RsaKeyResult])
+@router.post("/rsa/keygen", response_model=APIResponse[RsaKeygenResponse])
 async def rsa_keygen(
-    _req: RsaKeygenRequest,
-    _user: User = Depends(get_current_user),
-) -> APIResponse[RsaKeyResult]:
-    raise NotImplementedError("services.pubkey_service.rsa_keygen(req, user)")
+    request: Request,
+    req: RsaKeygenRequest,
+) -> APIResponse[RsaKeygenResponse]:
+    result = await pubkey_service.rsa_keygen(req)
+    return _ok(request, result)
 
 
-@router.post("/rsa/encrypt", response_model=APIResponse[RsaEncryptResult])
+@router.post("/rsa/encrypt", response_model=APIResponse[RsaEncryptResponse])
 async def rsa_encrypt(
-    _req: RsaEncryptRequest,
-    _user: User = Depends(get_current_user),
-) -> APIResponse[RsaEncryptResult]:
-    raise NotImplementedError("services.pubkey_service.rsa_encrypt(req, user)")
+    request: Request,
+    req: RsaEncryptRequest,
+) -> APIResponse[RsaEncryptResponse]:
+    result = await pubkey_service.rsa_encrypt(req)
+    return _ok(request, result)
 
 
-@router.post("/rsa/decrypt", response_model=APIResponse[RsaEncryptResult])
+@router.post("/rsa/decrypt", response_model=APIResponse[RsaDecryptResponse])
 async def rsa_decrypt(
-    _req: RsaDecryptRequest,
-    _user: User = Depends(get_current_user),
-) -> APIResponse[RsaEncryptResult]:
-    raise NotImplementedError("services.pubkey_service.rsa_decrypt(req, user)")
+    request: Request,
+    req: RsaDecryptRequest,
+) -> APIResponse[RsaDecryptResponse]:
+    result = await pubkey_service.rsa_decrypt(req)
+    return _ok(request, result)
 
 
-@router.post("/rsa/sign", response_model=APIResponse[RsaSignResult])
+@router.post("/rsa/sign", response_model=APIResponse[RsaSignResponse])
 async def rsa_sign(
-    _req: RsaSignRequest,
-    _user: User = Depends(get_current_user),
-) -> APIResponse[RsaSignResult]:
-    raise NotImplementedError("services.pubkey_service.rsa_sign(req, user)")
+    request: Request,
+    req: RsaSignRequest,
+) -> APIResponse[RsaSignResponse]:
+    result = await pubkey_service.rsa_sign(req)
+    return _ok(request, result)
 
 
-@router.post("/rsa/verify", response_model=APIResponse[RsaVerifyResult])
+@router.post("/rsa/verify", response_model=APIResponse[RsaVerifyResponse])
 async def rsa_verify(
-    _req: RsaVerifyRequest,
-    _user: User = Depends(get_current_user),
-) -> APIResponse[RsaVerifyResult]:
-    raise NotImplementedError("services.pubkey_service.rsa_verify(req, user)")
+    request: Request,
+    req: RsaVerifyRequest,
+) -> APIResponse[RsaVerifyResponse]:
+    result = await pubkey_service.rsa_verify(req)
+    return _ok(request, result)
 
 
-# ----- ECC / ECDSA -----
-
-@router.post("/ecc/keygen", response_model=APIResponse[EccKeyResult])
+@router.post("/ecc/keygen", response_model=APIResponse[EccKeygenResponse])
 async def ecc_keygen(
-    _req: EccKeygenRequest,
-    _user: User = Depends(get_current_user),
-) -> APIResponse[EccKeyResult]:
-    raise NotImplementedError("services.pubkey_service.ecc_keygen(req, user)")
+    request: Request,
+    req: EccKeygenRequest,
+) -> APIResponse[EccKeygenResponse]:
+    result = await pubkey_service.ecc_keygen(req)
+    return _ok(request, result)
 
 
-@router.post("/ecdsa/sign", response_model=APIResponse[EcdsaSignResult])
+@router.post("/ecdsa/sign", response_model=APIResponse[EcdsaSignResponse])
 async def ecdsa_sign(
-    _req: EcdsaSignRequest,
-    _user: User = Depends(get_current_user),
-) -> APIResponse[EcdsaSignResult]:
-    raise NotImplementedError("services.pubkey_service.ecdsa_sign(req, user)")
+    request: Request,
+    req: EcdsaSignRequest,
+) -> APIResponse[EcdsaSignResponse]:
+    result = await pubkey_service.ecdsa_sign(req)
+    return _ok(request, result)
 
 
-@router.post("/ecdsa/verify", response_model=APIResponse[EcdsaVerifyResult])
+@router.post("/ecdsa/verify", response_model=APIResponse[EcdsaVerifyResponse])
 async def ecdsa_verify(
-    _req: EcdsaVerifyRequest,
-    _user: User = Depends(get_current_user),
-) -> APIResponse[EcdsaVerifyResult]:
-    raise NotImplementedError("services.pubkey_service.ecdsa_verify(req, user)")
+    request: Request,
+    req: EcdsaVerifyRequest,
+) -> APIResponse[EcdsaVerifyResponse]:
+    result = await pubkey_service.ecdsa_verify(req)
+    return _ok(request, result)
+
+
+def _ok(
+    request: Request,
+    data: (
+        RsaKeygenResponse
+        | RsaEncryptResponse
+        | RsaDecryptResponse
+        | RsaSignResponse
+        | RsaVerifyResponse
+        | EccKeygenResponse
+        | EcdsaSignResponse
+        | EcdsaVerifyResponse
+    ),
+) -> APIResponse:
+    return APIResponse(
+        code=StatusCode.OK,
+        message=DEFAULT_MESSAGES[StatusCode.OK],
+        data=data,
+        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
+    )
