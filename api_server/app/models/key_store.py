@@ -8,10 +8,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import TYPE_CHECKING
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from sqlalchemy import ForeignKey, LargeBinary, String
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -23,7 +22,7 @@ if TYPE_CHECKING:
 class KeyStore(Base, TimestampMixin):
     __tablename__ = "key_store"
 
-    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
     key_type: Mapped[str] = mapped_column(String(16), nullable=False)
     algorithm: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -34,4 +33,4 @@ class KeyStore(Base, TimestampMixin):
     expires_at: Mapped[datetime | None] = mapped_column(nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(nullable=True, index=True)
 
-    user: Mapped["User"] = relationship(back_populates="keys")
+    user: Mapped[User] = relationship(back_populates="keys")

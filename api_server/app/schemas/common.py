@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -19,7 +19,7 @@ class APIResponse(BaseModel, Generic[T]):
     message: str = Field(..., description="Human-readable summary")
     data: T | None = Field(default=None, description="Operation payload, schema-typed per route")
     trace_id: str = Field(..., description="UUID propagated through middleware → logs → DB")
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     debug: dict[str, Any] | None = Field(
         default=None,
         description="Set only when debug mode is enabled AND caller is an admin",

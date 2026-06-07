@@ -17,8 +17,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.cache import create_cache
 from app.core.config import get_settings
 from app.core.exceptions import install_exception_handlers
+from app.db.session import init_engine
 from app.middleware.audit import AuditMiddleware
 from app.middleware.auth import JWTAuthMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -42,9 +44,11 @@ from app.routers import (
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Wire long-lived resources (DB pool, Redis client) at boot."""
-    # TODO: open DB engine + Redis pool here, store on app.state
+    init_engine()
     yield
-    # TODO: close them here
+    cache = getattr(app.state, "cache", None)
+    if cache is not None:
+        await cache.close()
 
 
 def create_app() -> FastAPI:
@@ -62,13 +66,14 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json" if settings.docs_enabled else None,
         lifespan=lifespan,
     )
+    app.state.cache = create_cache()
 
     # CORS — explicit whitelist; never use "*" in prod.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "X-Trace-Id"],
     )
 
@@ -95,6 +100,10 @@ def create_app() -> FastAPI:
 
     @app.get("/healthz", include_in_schema=False)
     async def healthz() -> dict[str, str]:
+        return {"status": "ok"}
+
+    @app.get("/health", include_in_schema=False)
+    async def health() -> dict[str, str]:
         return {"status": "ok"}
 
     return app

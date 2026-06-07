@@ -26,6 +26,9 @@ if (-not ($env:PATH.Split(';') -contains $CargoBin)) {
 # ----- Python -----
 $env:PYTHONDONTWRITEBYTECODE      = "1"
 $env:PIP_DISABLE_PIP_VERSION_CHECK = "1"
+if (-not $env:CRYPTOLAB_JWT_SECRET) {
+    $env:CRYPTOLAB_JWT_SECRET = "dev-jwt-secret-change-me-32-bytes-minimum-for-hs256"
+}
 
 # Project-local pip cache (replaces %LOCALAPPDATA%\pip\Cache).
 $env:PIP_CACHE_DIR = Join-Path $CryptolabRoot ".pip-cache"

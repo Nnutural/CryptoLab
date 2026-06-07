@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
 
 import httpx
@@ -20,9 +20,12 @@ _RSA_KEYPAIR: dict[str, str] | None = None
 
 
 @pytest.fixture
-async def client() -> AsyncIterator[httpx.AsyncClient]:
+async def client(
+    auth_headers: Callable[[httpx.AsyncClient, str], Awaitable[dict[str, str]]],
+) -> AsyncIterator[httpx.AsyncClient]:
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as test_client:
+        test_client.headers.update(await auth_headers(test_client, "pubkey-user"))
         yield test_client
 
 

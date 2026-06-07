@@ -40,7 +40,10 @@ async def rsa_keygen(req: RsaKeygenRequest) -> RsaKeygenResponse:
         d_hex=d.hex(),
         p_hex=p.hex(),
         q_hex=q.hex(),
-        warning="Private key is returned for demo only; production should store encrypted private key and return key_id",
+        warning=(
+            "Private key is returned for demo only; production should store encrypted "
+            "private key and return key_id"
+        ),
     )
 
 

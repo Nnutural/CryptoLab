@@ -1,4 +1,4 @@
-"""Application-level status codes (numbered per the design doc §3.2.2)."""
+"""Application-level status codes, separate from HTTP status codes."""
 
 from __future__ import annotations
 
@@ -6,37 +6,38 @@ from enum import IntEnum
 
 
 class StatusCode(IntEnum):
-    """Business status code. Distinct from HTTP status."""
+    """Business status code used in the uniform API response envelope."""
 
-    # 1xxx — success
     OK = 1000
 
-    # 2xxx — client parameter errors
     PARAM_MISSING = 2001
     KEY_LENGTH_INVALID = 2002
     ENCODING_ERROR = 2003
     ALGORITHM_UNSUPPORTED = 2004
     PADDING_INVALID = 2005
 
-    # 3xxx — cryptographic failures
     ENCRYPT_FAILED = 3001
-    DECRYPT_FAILED = 3002          # includes MAC verification failure
+    DECRYPT_FAILED = 3002
     SIGNATURE_INVALID = 3003
     KEY_MISMATCH = 3004
 
-    # 4xxx — auth / authz
     UNAUTHENTICATED = 4001
     TOKEN_EXPIRED = 4002
     FORBIDDEN = 4003
-    RATE_LIMITED = 4029
+    AUTH_TOKEN_MISSING = 4101
+    AUTH_TOKEN_MALFORMED = 4102
+    AUTH_TOKEN_INVALID = 4103
+    AUTH_TOKEN_EXPIRED = 4104
+    AUTH_TOKEN_BLACKLISTED = 4105
+    AUTH_LOGIN_FAILED = 4106
+    AUTH_USERNAME_EXISTS = 4107
 
-    # 5xxx — server side
     INTERNAL = 5000
-    CRYPTO_LIB_ERROR = 5001
+    RATE_LIMIT_EXCEEDED = 5001
     DATABASE_ERROR = 5002
+    CRYPTO_LIB_ERROR = 5003
 
 
-# Default English messages — Chinese variants come from i18n at the front-end.
 DEFAULT_MESSAGES: dict[int, str] = {
     StatusCode.OK: "Success",
     StatusCode.PARAM_MISSING: "Required parameter missing",
@@ -51,14 +52,20 @@ DEFAULT_MESSAGES: dict[int, str] = {
     StatusCode.UNAUTHENTICATED: "Authentication required",
     StatusCode.TOKEN_EXPIRED: "Token has expired",
     StatusCode.FORBIDDEN: "Forbidden",
-    StatusCode.RATE_LIMITED: "Too many requests",
+    StatusCode.AUTH_TOKEN_MISSING: "Authorization token missing",
+    StatusCode.AUTH_TOKEN_MALFORMED: "Authorization header is malformed",
+    StatusCode.AUTH_TOKEN_INVALID: "Authorization token is invalid",
+    StatusCode.AUTH_TOKEN_EXPIRED: "Authorization token has expired",
+    StatusCode.AUTH_TOKEN_BLACKLISTED: "Authorization token has been revoked",
+    StatusCode.AUTH_LOGIN_FAILED: "Invalid username or password",
+    StatusCode.AUTH_USERNAME_EXISTS: "Username already exists",
     StatusCode.INTERNAL: "Internal server error",
-    StatusCode.CRYPTO_LIB_ERROR: "Cryptographic library error",
+    StatusCode.RATE_LIMIT_EXCEEDED: "Too many requests",
     StatusCode.DATABASE_ERROR: "Database error",
+    StatusCode.CRYPTO_LIB_ERROR: "Cryptographic library error",
 }
 
 
-# Map business codes back to HTTP status codes for the wire response.
 HTTP_FOR_STATUS: dict[int, int] = {
     StatusCode.OK: 200,
     StatusCode.PARAM_MISSING: 400,
@@ -73,8 +80,15 @@ HTTP_FOR_STATUS: dict[int, int] = {
     StatusCode.UNAUTHENTICATED: 401,
     StatusCode.TOKEN_EXPIRED: 401,
     StatusCode.FORBIDDEN: 403,
-    StatusCode.RATE_LIMITED: 429,
+    StatusCode.AUTH_TOKEN_MISSING: 401,
+    StatusCode.AUTH_TOKEN_MALFORMED: 401,
+    StatusCode.AUTH_TOKEN_INVALID: 401,
+    StatusCode.AUTH_TOKEN_EXPIRED: 401,
+    StatusCode.AUTH_TOKEN_BLACKLISTED: 401,
+    StatusCode.AUTH_LOGIN_FAILED: 401,
+    StatusCode.AUTH_USERNAME_EXISTS: 409,
     StatusCode.INTERNAL: 500,
-    StatusCode.CRYPTO_LIB_ERROR: 500,
+    StatusCode.RATE_LIMIT_EXCEEDED: 429,
     StatusCode.DATABASE_ERROR: 500,
+    StatusCode.CRYPTO_LIB_ERROR: 500,
 }

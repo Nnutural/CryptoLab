@@ -26,7 +26,6 @@ dependencies = [
 
     # Auth + crypto helpers (stdlib `hmac` etc. are also used)
     "pyjwt==2.8.*",
-    "passlib[bcrypt]==1.7.*",
     "python-multipart==0.0.9",
     "Pillow==10.3.*",
 
@@ -45,7 +44,7 @@ dev = [
     "httpx==0.27.*",
     "ruff==0.4.*",
     "mypy==1.10.*",
-    "types-passlib",
+    "fakeredis>=2.21",
 ]
 
 [tool.setuptools.packages.find]

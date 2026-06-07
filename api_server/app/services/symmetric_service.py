@@ -121,6 +121,10 @@ def _status_for_decrypt_error(message: str) -> StatusCode:
         return StatusCode.PADDING_INVALID
     if "unsupported" in lowered:
         return StatusCode.ALGORITHM_UNSUPPORTED
-    if "iv length" in lowered or "invalid input length" in lowered or "invalid parameter" in lowered:
+    if (
+        "iv length" in lowered
+        or "invalid input length" in lowered
+        or "invalid parameter" in lowered
+    ):
         return StatusCode.PARAM_MISSING
     return StatusCode.DECRYPT_FAILED

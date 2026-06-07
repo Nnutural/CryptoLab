@@ -1,9 +1,4 @@
-"""Runtime configuration loaded from env vars + .env file.
-
-Driven by `pydantic-settings`. Defaults are safe for local development; any
-secret-bearing field has no default and will raise at startup if missing in
-production.
-"""
+"""Runtime configuration loaded from env vars + .env file."""
 
 from __future__ import annotations
 
@@ -31,11 +26,13 @@ class Settings(BaseSettings):
 
     # ----- security -----
     jwt_secret: str = Field(
-        default="dev-jwt-secret-change-me",
+        ...,
         description="HS256 signing key for JWT access tokens.",
+        min_length=32,
     )
     jwt_algorithm: Literal["HS256"] = "HS256"
-    jwt_access_ttl_seconds: int = 3600
+    jwt_access_ttl_seconds: int = 1800
+    password_pbkdf2_iterations: int = 100_000
 
     # KEK (Key Encryption Key) for the at-rest key store. Hex-encoded 32 bytes.
     master_key_hex: str = Field(
@@ -48,11 +45,13 @@ class Settings(BaseSettings):
     )
 
     # ----- data plane -----
-    database_url: str = "postgresql+asyncpg://cryptolab:cryptolab@localhost:5432/cryptolab"
-    redis_url: str = "redis://localhost:6379/0"
+    database_url: str = "sqlite:///./cryptolab.db"
+    redis_url: str = "memory://"
 
     # ----- rate limiting -----
-    rate_limit_per_minute: int = 120
+    rate_limit_window_seconds: int = 60
+    rate_limit_per_minute: int = 60
+    login_rate_limit_per_minute: int = 5
 
     # ----- audit -----
     audit_sample_rate: float = 1.0  # 1.0 = log every request

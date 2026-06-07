@@ -1,42 +1,47 @@
-"""Key-store orchestration: wrap with KEK, persist, list, revoke.
-
-Threat model: the database may be compromised; the KEK lives only in env.
-A leaked DB dump therefore does not yield usable private keys.
-"""
+"""Key-store query and revoke operations."""
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
+from app.core.exceptions import CryptoAPIException
+from app.core.security import AuthenticatedUser
+from app.core.status_codes import StatusCode
 from app.models.key_store import KeyStore
-from app.models.user import User
 
 
-async def store(
-    _db: AsyncSession,
-    _user: User,
-    _key_type: str,
-    _algorithm: str,
-    _key_material: bytes,
-    _label: str | None = None,
-) -> KeyStore:
-    raise NotImplementedError(
-        "iv = OsRng(12) → (ct, tag) = AES-256-GCM(KEK, iv, key_material) "
-        "→ INSERT into key_store"
-    )
+def list_for_user(db: Session, user: AuthenticatedUser) -> list[KeyStore]:
+    """List non-deleted keys owned by the current user."""
+    try:
+        return list(
+            db.execute(
+                select(KeyStore).where(
+                    KeyStore.user_id == user.id,
+                    KeyStore.deleted_at.is_(None),
+                )
+            )
+            .scalars()
+            .all()
+        )
+    except SQLAlchemyError as exc:
+        raise CryptoAPIException(StatusCode.DATABASE_ERROR, "key_list_failed") from exc
 
 
-async def fetch(_db: AsyncSession, _user: User, _key_id: UUID) -> bytes:
-    raise NotImplementedError(
-        "SELECT row → assert user_id matches → AES-256-GCM decrypt → return plaintext key bytes"
-    )
-
-
-async def list_for_user(_db: AsyncSession, _user: User) -> list[KeyStore]:
-    raise NotImplementedError("SELECT * WHERE user_id = user.id AND deleted_at IS NULL")
-
-
-async def revoke(_db: AsyncSession, _user: User, _key_id: UUID) -> None:
-    raise NotImplementedError("UPDATE key_store SET deleted_at = now() WHERE id = key_id AND user_id = user.id")
+def revoke(db: Session, user: AuthenticatedUser, key_id: UUID) -> None:
+    """Soft-delete a user-owned key."""
+    try:
+        row = db.get(KeyStore, str(key_id))
+        if row is None or row.user_id != user.id or row.deleted_at is not None:
+            raise CryptoAPIException(StatusCode.KEY_MISMATCH, "key_not_found")
+        row.deleted_at = datetime.now(UTC)
+        db.commit()
+    except CryptoAPIException:
+        raise
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise CryptoAPIException(StatusCode.DATABASE_ERROR, "key_revoke_failed") from exc

@@ -25,5 +25,5 @@ class User(Base, TimestampMixin):
     role: Mapped[str] = mapped_column(String(16), default="user")
     last_login_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
-    keys: Mapped[list["KeyStore"]] = relationship(back_populates="user")
-    logs: Mapped[list["OperationLog"]] = relationship(back_populates="user")
+    keys: Mapped[list[KeyStore]] = relationship(back_populates="user")
+    logs: Mapped[list[OperationLog]] = relationship(back_populates="user")

@@ -22,7 +22,7 @@ class _SymmetricBase(BaseModel):
     aad_b64: str | None = None
 
     @model_validator(mode="after")
-    def validate_lengths(self) -> "_SymmetricBase":
+    def validate_lengths(self) -> _SymmetricBase:
         key = _decode_hex(self.key_hex, "key_hex")
         if len(key) not in {16, 24, 32}:
             raise ValueError("key length must be 16, 24, or 32 bytes")

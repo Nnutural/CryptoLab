@@ -1,29 +1,62 @@
-"""Key-store endpoints: list / get / delete user-owned keys."""
+"""Key-store endpoints."""
 
 from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from sqlalchemy.orm import Session
 
+from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
+from app.db.session import get_db
 from app.middleware.auth import get_current_user
-from app.models.user import User
 from app.schemas.common import APIResponse
 from app.schemas.keys import KeyListItem
+from app.services import key_service
 
 router = APIRouter()
+USER_DEP = Depends(get_current_user)
+DB_DEP = Depends(get_db)
 
 
 @router.get("", response_model=APIResponse[list[KeyListItem]])
-async def list_keys(_user: User = Depends(get_current_user)) -> APIResponse[list[KeyListItem]]:
+async def list_keys(
+    request: Request,
+    user=USER_DEP,
+    db: Session = DB_DEP,
+) -> APIResponse[list[KeyListItem]]:
     """List non-deleted keys owned by the current user."""
-    raise NotImplementedError("services.key_service.list_for_user(user)")
+    rows = key_service.list_for_user(db, user)
+    data = [
+        KeyListItem(
+            id=UUID(row.id),
+            key_type=row.key_type,
+            algorithm=row.algorithm,
+            label=row.label,
+            created_at=row.created_at,
+            expires_at=row.expires_at,
+        )
+        for row in rows
+    ]
+    return _ok(request, data)
 
 
 @router.delete("/{key_id}", response_model=APIResponse[None])
 async def revoke_key(
-    _key_id: UUID,
-    _user: User = Depends(get_current_user),
+    key_id: UUID,
+    request: Request,
+    user=USER_DEP,
+    db: Session = DB_DEP,
 ) -> APIResponse[None]:
-    """Soft-delete (sets `deleted_at`) — actual KEK-wrapped material is kept for forensics."""
-    raise NotImplementedError("services.key_service.revoke(user, key_id)")
+    """Soft-delete a user-owned key."""
+    key_service.revoke(db, user, key_id)
+    return _ok(request, None)
+
+
+def _ok(request: Request, data):
+    return APIResponse(
+        code=StatusCode.OK,
+        message=DEFAULT_MESSAGES[StatusCode.OK],
+        data=data,
+        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
+    )

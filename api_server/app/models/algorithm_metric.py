@@ -11,7 +11,7 @@ from app.db.base import Base, TimestampMixin
 class AlgorithmMetric(Base, TimestampMixin):
     __tablename__ = "algorithm_metrics"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     algorithm: Mapped[str] = mapped_column(String(32), index=True, nullable=False)
     data_size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
     operation: Mapped[str] = mapped_column(String(32), nullable=False)

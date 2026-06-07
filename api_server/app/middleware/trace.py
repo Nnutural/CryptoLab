@@ -8,6 +8,8 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.core.context import set_trace_id
+
 
 class TraceIDMiddleware(BaseHTTPMiddleware):
     """Honor an incoming `X-Trace-Id` header, or mint a fresh one.
@@ -19,6 +21,7 @@ class TraceIDMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         trace_id = request.headers.get("X-Trace-Id") or str(uuid4())
         request.state.trace_id = trace_id
+        set_trace_id(trace_id)
         response = await call_next(request)
         response.headers["X-Trace-Id"] = trace_id
         return response

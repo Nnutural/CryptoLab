@@ -10,6 +10,7 @@ import time
 from io import BytesIO
 from typing import Any
 
+from app.core.context import get_trace_id
 from app.core.exceptions import CryptoAPIException
 from app.core.logging import get_logger
 from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
@@ -43,7 +44,7 @@ def ok(data: Any) -> APIResponse[Any]:
         code=StatusCode.OK,
         message=DEFAULT_MESSAGES[StatusCode.OK],
         data=data,
-        trace_id="00000000-0000-0000-0000-000000000000",
+        trace_id=get_trace_id(),
     )
 
 
