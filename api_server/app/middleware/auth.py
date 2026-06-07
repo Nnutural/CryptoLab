@@ -28,6 +28,8 @@ PHASE_PUBLIC_PREFIXES: tuple[str, ...] = (
     "/api/v1/hash/",
     "/api/v1/symmetric/",
     "/api/v1/pubkey/",
+    "/api/v1/demos/",
+    "/api/v1/scenarios/",
 )
 
 

@@ -28,6 +28,7 @@ dependencies = [
     "pyjwt==2.8.*",
     "passlib[bcrypt]==1.7.*",
     "python-multipart==0.0.9",
+    "Pillow==10.3.*",
 
     # Observability
     "structlog==24.1.*",

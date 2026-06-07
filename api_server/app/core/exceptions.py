@@ -26,10 +26,12 @@ class CryptoAPIException(Exception):
         message: str | None = None,
         *,
         data: dict[str, Any] | None = None,
+        http_status: int | None = None,
     ) -> None:
         self.code = int(code)
         self.message = message or DEFAULT_MESSAGES.get(self.code, "Error")
         self.data = data
+        self.http_status = http_status
         super().__init__(self.message)
 
 
@@ -38,7 +40,7 @@ def install_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(CryptoAPIException)
     async def handle_crypto(request: Request, exc: CryptoAPIException) -> JSONResponse:
-        return _envelope(request, exc.code, exc.message, exc.data)
+        return _envelope(request, exc.code, exc.message, exc.data, http_status=exc.http_status)
 
     @app.exception_handler(RequestValidationError)
     async def handle_validation(request: Request, exc: RequestValidationError) -> JSONResponse:

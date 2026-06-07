@@ -13,6 +13,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyModule};
 
 use crate::error::CryptoResult;
+use num_bigint::BigUint;
 
 /// Register every exported binding on `m`.
 pub fn register(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
@@ -66,6 +67,11 @@ pub fn register(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(ecc_keygen, m)?)?;
     m.add_function(wrap_pyfunction!(ecdsa_sign, m)?)?;
     m.add_function(wrap_pyfunction!(ecdsa_verify, m)?)?;
+    m.add_function(wrap_pyfunction!(rsa_demo_unsafe_keygen, m)?)?;
+    m.add_function(wrap_pyfunction!(rsa_demo_unsafe_encrypt_raw, m)?)?;
+    m.add_function(wrap_pyfunction!(rsa_demo_cube_root, m)?)?;
+    m.add_function(wrap_pyfunction!(ecdsa_demo_sign_with_k, m)?)?;
+    m.add_function(wrap_pyfunction!(ecdsa_demo_recover_d_from_k_reuse, m)?)?;
 
     // Version constant.
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
@@ -444,12 +450,7 @@ fn rsa_verify(
 }
 
 #[pyfunction]
-fn rsa_verify_pss(
-    message: &[u8],
-    signature: &[u8],
-    n: &[u8],
-    e: &[u8],
-) -> PyResult<bool> {
+fn rsa_verify_pss(message: &[u8], signature: &[u8], n: &[u8], e: &[u8]) -> PyResult<bool> {
     Ok(crate::pubkey::rsa::verify(message, signature, n, e, "pss").is_ok())
 }
 
@@ -493,4 +494,94 @@ fn ecdsa_verify(
     curve: &str,
 ) -> PyResult<bool> {
     Ok(crate::pubkey::ecdsa::verify(message, r, s, px, py, curve).is_ok())
+}
+
+#[pyfunction]
+fn rsa_demo_unsafe_keygen(py: Python<'_>, bits: usize, e: u64) -> PyResult<PyObject> {
+    let key = crate::pubkey::demos::rsa_unsafe_generate_keypair(bits, e)?;
+    let tup = (
+        PyBytes::new(py, &key.n.to_bytes_be()),
+        PyBytes::new(py, &key.e.to_bytes_be()),
+        PyBytes::new(py, &key.d.to_bytes_be()),
+        PyBytes::new(py, &key.p.to_bytes_be()),
+        PyBytes::new(py, &key.q.to_bytes_be()),
+    );
+    Ok(tup.into_py(py))
+}
+
+#[pyfunction]
+fn rsa_demo_unsafe_encrypt_raw<'py>(
+    py: Python<'py>,
+    msg_be: &[u8],
+    n_be: &[u8],
+    e_be: &[u8],
+) -> PyResult<&'py PyBytes> {
+    let msg = BigUint::from_bytes_be(msg_be);
+    let n = BigUint::from_bytes_be(n_be);
+    let e = BigUint::from_bytes_be(e_be);
+    if n == BigUint::from(0u32) || msg >= n {
+        return Err(crate::error::CryptoError::InvalidParameter(
+            "raw RSA demo requires 0 <= msg < n and n > 0".to_string(),
+        )
+        .into());
+    }
+    Ok(PyBytes::new(
+        py,
+        &crate::pubkey::demos::rsa_unsafe_encrypt_raw(&msg, &n, &e).to_bytes_be(),
+    ))
+}
+
+#[pyfunction]
+fn rsa_demo_cube_root<'py>(py: Python<'py>, c_be: &[u8]) -> PyResult<&'py PyBytes> {
+    let c = BigUint::from_bytes_be(c_be);
+    Ok(PyBytes::new(
+        py,
+        &crate::pubkey::demos::integer_cube_root(&c).to_bytes_be(),
+    ))
+}
+
+#[pyfunction]
+fn ecdsa_demo_sign_with_k(
+    py: Python<'_>,
+    msg: &[u8],
+    d_be: &[u8],
+    k_be: &[u8],
+    curve: &str,
+) -> PyResult<PyObject> {
+    let curve = crate::pubkey::ecc::curve(curve)?;
+    let d = BigUint::from_bytes_be(d_be);
+    let k = BigUint::from_bytes_be(k_be);
+    let (r, s) = crate::pubkey::demos::ecdsa_sign_with_explicit_k(msg, &d, &k, &curve)?;
+    let order_len = ((curve.n.bits() + 7) / 8) as usize;
+    let tup = (
+        PyBytes::new(py, &crate::pubkey::ecc::to_fixed_bytes(&r, order_len)),
+        PyBytes::new(py, &crate::pubkey::ecc::to_fixed_bytes(&s, order_len)),
+    );
+    Ok(tup.into_py(py))
+}
+
+#[pyfunction]
+fn ecdsa_demo_recover_d_from_k_reuse<'py>(
+    py: Python<'py>,
+    r_be: &[u8],
+    s1_be: &[u8],
+    s2_be: &[u8],
+    h1_be: &[u8],
+    h2_be: &[u8],
+    curve: &str,
+) -> PyResult<&'py PyBytes> {
+    let curve = crate::pubkey::ecc::curve(curve)?;
+    let d = crate::pubkey::demos::ecdsa_recover_d_from_k_reuse(
+        &BigUint::from_bytes_be(r_be),
+        &BigUint::from_bytes_be(s1_be),
+        &BigUint::from_bytes_be(s2_be),
+        &BigUint::from_bytes_be(h1_be),
+        &BigUint::from_bytes_be(h2_be),
+        &curve,
+    )?;
+    let order_len = ((curve.n.bits() + 7) / 8) as usize;
+    Ok(PyBytes::new(
+        py,
+        &crate::pubkey::ecc::to_fixed_bytes(&d, order_len),
+    ))
 }

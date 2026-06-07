@@ -11,8 +11,8 @@ Bootstrap order:
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,10 +29,13 @@ from app.routers import (
     benchmark,
     demos,
     encoding,
-    hash as hash_router,
     keys,
     pubkey,
+    scenarios,
     symmetric,
+)
+from app.routers import (
+    hash as hash_router,
 )
 
 
@@ -84,6 +87,7 @@ def create_app() -> FastAPI:
     app.include_router(hash_router.router, prefix=f"{api_prefix}/hash",      tags=["hash"])
     app.include_router(encoding.router,    prefix=f"{api_prefix}/encoding",  tags=["encoding"])
     app.include_router(pubkey.router,      prefix=f"{api_prefix}/pubkey",    tags=["pubkey"])
+    app.include_router(scenarios.router,   prefix=f"{api_prefix}/scenarios", tags=["scenarios"])
     app.include_router(keys.router,        prefix=f"{api_prefix}/keys",      tags=["keys"])
     app.include_router(audit.router,       prefix=f"{api_prefix}/audit",     tags=["audit"])
     app.include_router(demos.router,       prefix=f"{api_prefix}/demos",     tags=["demos"])

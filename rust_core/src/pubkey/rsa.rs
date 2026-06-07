@@ -18,8 +18,8 @@ use crate::hash::sha2::sha256;
 const H_LEN: usize = 32;
 const PSS_SALT_LEN: usize = 32;
 const SHA256_DIGESTINFO_PREFIX: [u8; 19] = [
-    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01,
-    0x05, 0x00, 0x04, 0x20,
+    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05,
+    0x00, 0x04, 0x20,
 ];
 
 /// CRT-friendly RSA private key pair.
@@ -108,15 +108,41 @@ impl RsaKeyPair {
         let h = (&self.qinv * diff) % &self.p;
         &m2 + &self.q * h
     }
+
+    fn private_op_crt_blinded(&self, c: &BigUint) -> CryptoResult<BigUint> {
+        let two = BigUint::from(2u32);
+        let one = BigUint::one();
+        if self.n <= two {
+            return Err(CryptoError::InvalidKey(
+                "RSA modulus too small for blinding".to_string(),
+            ));
+        }
+        let upper = CryptoBigInt(&self.n - &two);
+        for _ in 0..128 {
+            let r = CryptoBigInt::random_below(&upper)?.0 + &two;
+            if r.gcd(&self.n) != one {
+                continue;
+            }
+            let r_inv = CryptoBigInt(r.clone())
+                .mod_inverse(&CryptoBigInt(self.n.clone()))
+                .ok_or_else(|| {
+                    CryptoError::BigIntError("RSA blinding inverse missing".to_string())
+                })?
+                .0;
+            let blinded_c = (c * r.modpow(&self.e, &self.n)) % &self.n;
+            let blinded_m = self.private_op_crt(&blinded_c);
+            return Ok((blinded_m * r_inv) % &self.n);
+        }
+        Err(CryptoError::RandomError(
+            "failed to sample invertible RSA blinding factor".to_string(),
+        ))
+    }
 }
 
 /// Generate a fresh RSA keypair of `bits` bits with public exponent `e`.
 ///
 /// Returns big-endian byte representations of `(n, e, d, p, q)`.
-pub fn keygen(
-    bits: usize,
-    e: u64,
-) -> CryptoResult<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>)> {
+pub fn keygen(bits: usize, e: u64) -> CryptoResult<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>)> {
     let key = RsaKeyPair::generate(bits, e)?;
     Ok((
         key.n.to_bytes_be(),
@@ -195,7 +221,7 @@ pub fn decrypt_oaep_crt(
     if c >= key.n {
         return Err(CryptoError::InvalidPadding);
     }
-    let em = i2osp(&key.private_op_crt(&c), k)?;
+    let em = i2osp(&key.private_op_crt_blinded(&c)?, k)?;
     oaep_decode(&em)
 }
 
@@ -220,11 +246,17 @@ pub fn sign(message: &[u8], n: &[u8], d: &[u8], scheme: &str) -> CryptoResult<Ve
 }
 
 /// RSA-PSS sign using CRT private parameters.
-pub fn sign_pss_crt(message: &[u8], n: &[u8], d: &[u8], p: &[u8], q: &[u8]) -> CryptoResult<Vec<u8>> {
+pub fn sign_pss_crt(
+    message: &[u8],
+    n: &[u8],
+    d: &[u8],
+    p: &[u8],
+    q: &[u8],
+) -> CryptoResult<Vec<u8>> {
     let key = private_from_parts(n, d, p, q)?;
     let k = modulus_len(&key.n)?;
     let em = pss_encode(message, key.n.bits().saturating_sub(1) as usize)?;
-    let s = key.private_op_crt(&os2ip(&em));
+    let s = key.private_op_crt_blinded(&os2ip(&em))?;
     i2osp(&s, k)
 }
 
@@ -576,5 +608,34 @@ mod tests {
         let mut tampered = sig;
         tampered[0] ^= 1;
         assert!(verify(message, &tampered, &n, &e, "pss").is_err());
+    }
+
+    #[test]
+    fn blinded_decrypt_matches_plain() {
+        let p = BigUint::from(61u32);
+        let q = BigUint::from(53u32);
+        let n = &p * &q;
+        let e = BigUint::from(17u32);
+        let d = BigUint::from(2753u32);
+        let one = BigUint::one();
+        let key = RsaKeyPair {
+            n: n.clone(),
+            e: e.clone(),
+            d: d.clone(),
+            p: p.clone(),
+            q: q.clone(),
+            dp: &d % (&p - &one),
+            dq: &d % (&q - &one),
+            qinv: CryptoBigInt(q.clone())
+                .mod_inverse(&CryptoBigInt(p.clone()))
+                .expect("q inverse")
+                .0,
+        };
+        let plaintext = BigUint::from(123u32);
+        let ciphertext = plaintext.modpow(&e, &n);
+        assert_eq!(
+            key.private_op_crt_blinded(&ciphertext).expect("blinded op"),
+            key.private_op_crt(&ciphertext)
+        );
     }
 }
