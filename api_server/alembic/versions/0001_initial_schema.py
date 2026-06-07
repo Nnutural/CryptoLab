@@ -54,6 +54,7 @@ def upgrade() -> None:
         sa.Column("key_material_encrypted", sa.LargeBinary(), nullable=False),
         sa.Column("iv", sa.LargeBinary(), nullable=False),
         sa.Column("auth_tag", sa.LargeBinary(), nullable=False),
+        sa.Column("paired_key_id", sa.String(36), nullable=True),
         sa.Column("label", sa.String(128), nullable=True),
         sa.Column(
             "created_at",
@@ -65,6 +66,7 @@ def upgrade() -> None:
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.create_index("ix_key_store_user_id", "key_store", ["user_id"])
+    op.create_index("ix_key_store_paired_key_id", "key_store", ["paired_key_id"])
     op.create_index("ix_key_store_deleted_at", "key_store", ["deleted_at"])
 
     op.create_table(
@@ -153,6 +155,7 @@ def downgrade() -> None:
     op.drop_table("operation_logs")
 
     op.drop_index("ix_key_store_deleted_at", table_name="key_store")
+    op.drop_index("ix_key_store_paired_key_id", table_name="key_store")
     op.drop_index("ix_key_store_user_id", table_name="key_store")
     op.drop_table("key_store")
 

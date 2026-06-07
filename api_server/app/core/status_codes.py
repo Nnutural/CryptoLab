@@ -32,6 +32,11 @@ class StatusCode(IntEnum):
     AUTH_LOGIN_FAILED = 4106
     AUTH_USERNAME_EXISTS = 4107
 
+    KEY_NOT_OWNED = 4201
+    KEY_NOT_FOUND = 4202
+    KEY_TYPE_MISMATCH = 4203
+    KEY_PRIVATE_ACCESS_DENIED = 4204
+
     INTERNAL = 5000
     RATE_LIMIT_EXCEEDED = 5001
     DATABASE_ERROR = 5002
@@ -59,6 +64,10 @@ DEFAULT_MESSAGES: dict[int, str] = {
     StatusCode.AUTH_TOKEN_BLACKLISTED: "Authorization token has been revoked",
     StatusCode.AUTH_LOGIN_FAILED: "Invalid username or password",
     StatusCode.AUTH_USERNAME_EXISTS: "Username already exists",
+    StatusCode.KEY_NOT_OWNED: "Key not owned by current user",
+    StatusCode.KEY_NOT_FOUND: "Key not found",
+    StatusCode.KEY_TYPE_MISMATCH: "Key type does not match the operation",
+    StatusCode.KEY_PRIVATE_ACCESS_DENIED: "Cannot export private or symmetric key material",
     StatusCode.INTERNAL: "Internal server error",
     StatusCode.RATE_LIMIT_EXCEEDED: "Too many requests",
     StatusCode.DATABASE_ERROR: "Database error",
@@ -87,6 +96,10 @@ HTTP_FOR_STATUS: dict[int, int] = {
     StatusCode.AUTH_TOKEN_BLACKLISTED: 401,
     StatusCode.AUTH_LOGIN_FAILED: 401,
     StatusCode.AUTH_USERNAME_EXISTS: 409,
+    StatusCode.KEY_NOT_OWNED: 403,
+    StatusCode.KEY_NOT_FOUND: 404,
+    StatusCode.KEY_TYPE_MISMATCH: 400,
+    StatusCode.KEY_PRIVATE_ACCESS_DENIED: 403,
     StatusCode.INTERNAL: 500,
     StatusCode.RATE_LIMIT_EXCEEDED: 429,
     StatusCode.DATABASE_ERROR: 500,

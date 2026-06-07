@@ -1,28 +1,50 @@
-"""Bridge from API DTOs to the Rust symmetric primitives."""
+"""Bridge from API DTOs to the Rust symmetric primitives — key_id based."""
 
 from __future__ import annotations
 
 import base64
+import secrets
 import time
 from collections.abc import Callable
 
+from sqlalchemy.orm import Session
+
 from app.core.exceptions import CryptoAPIException
+from app.core.security import AuthenticatedUser
 from app.core.status_codes import StatusCode
+from app.schemas.keys import SymmetricKeygenRequest
 from app.schemas.symmetric import (
     SymmetricDecryptRequest,
     SymmetricDecryptResponse,
     SymmetricEncryptRequest,
     SymmetricEncryptResponse,
 )
+from app.services import key_service
 
 
-async def encrypt(algo: str, req: SymmetricEncryptRequest) -> SymmetricEncryptResponse:
-    """Encrypt by dispatching to cryptolab_core through the selected algorithm."""
+async def keygen(
+    db: Session, user: AuthenticatedUser, req: SymmetricKeygenRequest
+) -> str:
+    """Generate a random symmetric key, store it, return key_id."""
+    req.validate_key_size()
+    raw_key = secrets.token_bytes(req.key_size)
+    return key_service.store_symmetric_key(db, user, req.algorithm, raw_key, req.label)
+
+
+async def encrypt(
+    db: Session,
+    user: AuthenticatedUser,
+    algo: str,
+    req: SymmetricEncryptRequest,
+) -> SymmetricEncryptResponse:
+    """Fetch key from store, then encrypt."""
     if req.algorithm != algo:
         raise CryptoAPIException(
             StatusCode.ALGORITHM_UNSUPPORTED,
             "Request algorithm must match the URL path",
         )
+
+    key_bytes = key_service.fetch_and_decrypt(db, user, req.key_id, "symmetric")
 
     try:
         import cryptolab_core
@@ -35,7 +57,7 @@ async def encrypt(algo: str, req: SymmetricEncryptRequest) -> SymmetricEncryptRe
         start = time.perf_counter()
         ciphertext = functions[algo](
             req.plaintext_bytes(),
-            req.key_bytes(),
+            key_bytes,
             req.mode,
             req.iv_bytes(),
             req.aad_bytes(),
@@ -57,13 +79,20 @@ async def encrypt(algo: str, req: SymmetricEncryptRequest) -> SymmetricEncryptRe
     )
 
 
-async def decrypt(algo: str, req: SymmetricDecryptRequest) -> SymmetricDecryptResponse:
-    """Decrypt by dispatching to cryptolab_core through the selected algorithm."""
+async def decrypt(
+    db: Session,
+    user: AuthenticatedUser,
+    algo: str,
+    req: SymmetricDecryptRequest,
+) -> SymmetricDecryptResponse:
+    """Fetch key from store, then decrypt."""
     if req.algorithm != algo:
         raise CryptoAPIException(
             StatusCode.ALGORITHM_UNSUPPORTED,
             "Request algorithm must match the URL path",
         )
+
+    key_bytes = key_service.fetch_and_decrypt(db, user, req.key_id, "symmetric")
 
     try:
         import cryptolab_core
@@ -76,7 +105,7 @@ async def decrypt(algo: str, req: SymmetricDecryptRequest) -> SymmetricDecryptRe
         start = time.perf_counter()
         plaintext = functions[algo](
             req.ciphertext_bytes(),
-            req.key_bytes(),
+            key_bytes,
             req.mode,
             req.iv_bytes(),
             req.aad_bytes(),

@@ -29,6 +29,7 @@ class KeyStore(Base, TimestampMixin):
     key_material_encrypted: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     iv: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     auth_tag: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    paired_key_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     label: Mapped[str | None] = mapped_column(String(128), nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(nullable=True, index=True)

@@ -9,7 +9,10 @@ import secrets
 import time
 from typing import Any
 
+from sqlalchemy.orm import Session
+
 from app.core.exceptions import CryptoAPIException
+from app.core.security import AuthenticatedUser
 from app.core.status_codes import StatusCode
 from app.schemas.scenarios import (
     MAX_FILE_BYTES,
@@ -18,6 +21,7 @@ from app.schemas.scenarios import (
     SecureSendRequest,
     SecureSendResponse,
 )
+from app.services import key_service
 
 SUPPORTED_ALG = {
     "kem": "RSA-OAEP-SHA256",
@@ -27,7 +31,11 @@ SUPPORTED_ALG = {
 }
 
 
-async def secure_file_send(req: SecureSendRequest) -> SecureSendResponse:
+async def secure_file_send(
+    req: SecureSendRequest,
+    db: Session | None = None,
+    user: AuthenticatedUser | None = None,
+) -> SecureSendResponse:
     """Package a file for secure transport using RSA-OAEP + AES-GCM + ECDSA."""
     start = time.perf_counter()
     plaintext = _b64decode(req.file_b64, "file_b64")
@@ -38,25 +46,34 @@ async def secure_file_send(req: SecureSendRequest) -> SecureSendResponse:
             http_status=422,
         )
 
-    n = _from_hex(req.receiver_rsa_public_pem["n_hex"], "receiver_rsa_public_pem.n_hex")
-    e = _from_hex(req.receiver_rsa_public_pem["e_hex"], "receiver_rsa_public_pem.e_hex")
-    sender_d = _from_hex(req.sender_ecdsa_private_hex, "sender_ecdsa_private_hex")
+    if req.receiver_rsa_public_key_id and db and user:
+        pub_mat = key_service.fetch_and_decrypt_json(
+            db, user, req.receiver_rsa_public_key_id, "public"
+        )
+        n = _from_hex(pub_mat["n_hex"], "n_hex")
+        e = _from_hex(pub_mat["e_hex"], "e_hex")
+    else:
+        assert req.receiver_rsa_public_pem is not None
+        n = _from_hex(req.receiver_rsa_public_pem["n_hex"], "receiver_rsa_public_pem.n_hex")
+        e = _from_hex(req.receiver_rsa_public_pem["e_hex"], "receiver_rsa_public_pem.e_hex")
+
+    if req.sender_ecdsa_private_key_id and db and user:
+        priv_mat = key_service.fetch_and_decrypt_json(
+            db, user, req.sender_ecdsa_private_key_id, "private"
+        )
+        sender_d = _from_hex(priv_mat["d_hex"], "d_hex")
+    else:
+        assert req.sender_ecdsa_private_hex is not None
+        sender_d = _from_hex(req.sender_ecdsa_private_hex, "sender_ecdsa_private_hex")
 
     try:
         import cryptolab_core
 
-        # 安全约束: K_sess 由 secrets.token_bytes 从 OS CSPRNG 派生, 禁用 random.random.
         session_key = secrets.token_bytes(32)
-        # 安全约束: IV 必须 per-message 唯一; 本流程 K_sess 用完即弃, IV 随消息生成.
         iv = secrets.token_bytes(12)
         enc_session_key = cryptolab_core.rsa_encrypt_oaep(session_key, n, e)
         ciphertext_with_tag = cryptolab_core.aes_encrypt(
-            plaintext,
-            session_key,
-            "GCM",
-            iv,
-            None,
-            "None",
+            plaintext, session_key, "GCM", iv, None, "None",
         )
         ciphertext = ciphertext_with_tag[:-16]
         tag = ciphertext_with_tag[-16:]
@@ -67,7 +84,6 @@ async def secure_file_send(req: SecureSendRequest) -> SecureSendResponse:
     except Exception as exc:
         raise CryptoAPIException(StatusCode.CRYPTO_LIB_ERROR, "secure file send failed") from exc
 
-    # 安全约束: envelope 只携带被 RSA-OAEP 包裹后的会话密钥, 禁止明文 K_sess 出现.
     envelope: dict[str, Any] = {
         "alg": SUPPORTED_ALG.copy(),
         "enc_session_key_b64": _b64encode(enc_session_key),
@@ -86,7 +102,11 @@ async def secure_file_send(req: SecureSendRequest) -> SecureSendResponse:
     )
 
 
-async def secure_file_receive(req: SecureReceiveRequest) -> SecureReceiveResponse:
+async def secure_file_receive(
+    req: SecureReceiveRequest,
+    db: Session | None = None,
+    user: AuthenticatedUser | None = None,
+) -> SecureReceiveResponse:
     """Open and verify a secure-file-transfer envelope."""
     start = time.perf_counter()
     envelope = req.envelope
@@ -97,6 +117,36 @@ async def secure_file_receive(req: SecureReceiveRequest) -> SecureReceiveRespons
             data={"error": "unsupported_algorithm"},
             http_status=422,
         )
+
+    if req.receiver_rsa_private_key_id and db and user:
+        priv_mat = key_service.fetch_and_decrypt_json(
+            db, user, req.receiver_rsa_private_key_id, "private"
+        )
+        rsa_n = _from_hex(priv_mat["n_hex"], "n_hex")
+        rsa_d = _from_hex(priv_mat["d_hex"], "d_hex")
+        rsa_p = _from_hex(priv_mat["p_hex"], "p_hex")
+        rsa_q = _from_hex(priv_mat["q_hex"], "q_hex")
+    else:
+        assert req.receiver_rsa_private is not None
+        private = req.receiver_rsa_private
+        rsa_n = _from_hex(private["n_hex"], "receiver_rsa_private.n_hex")
+        rsa_d = _from_hex(private["d_hex"], "receiver_rsa_private.d_hex")
+        rsa_p = _from_hex(private["p_hex"], "receiver_rsa_private.p_hex")
+        rsa_q = _from_hex(private["q_hex"], "receiver_rsa_private.q_hex")
+
+    if req.sender_ecdsa_public_key_id and db and user:
+        pub_mat = key_service.fetch_and_decrypt_json(
+            db, user, req.sender_ecdsa_public_key_id, "public"
+        )
+        ecc_qx = _from_hex(pub_mat["qx_hex"], "qx_hex")
+        ecc_qy = _from_hex(pub_mat["qy_hex"], "qy_hex")
+        ecc_curve = pub_mat.get("curve", "secp160r1")
+    else:
+        assert req.sender_ecdsa_public is not None
+        public = req.sender_ecdsa_public
+        ecc_qx = _from_hex(public["qx_hex"], "sender_ecdsa_public.qx_hex")
+        ecc_qy = _from_hex(public["qy_hex"], "sender_ecdsa_public.qy_hex")
+        ecc_curve = public.get("curve", "secp160r1")
 
     try:
         import cryptolab_core
@@ -116,13 +166,8 @@ async def secure_file_receive(req: SecureReceiveRequest) -> SecureReceiveRespons
         r = _from_hex(_required_str(signature, "r_hex"), "envelope.signature.r_hex")
         s = _from_hex(_required_str(signature, "s_hex"), "envelope.signature.s_hex")
 
-        private = req.receiver_rsa_private
         session_key = cryptolab_core.rsa_decrypt_oaep(
-            enc_session_key,
-            _from_hex(private["n_hex"], "receiver_rsa_private.n_hex"),
-            _from_hex(private["d_hex"], "receiver_rsa_private.d_hex"),
-            _from_hex(private["p_hex"], "receiver_rsa_private.p_hex"),
-            _from_hex(private["q_hex"], "receiver_rsa_private.q_hex"),
+            enc_session_key, rsa_n, rsa_d, rsa_p, rsa_q,
         )
         if len(session_key) != 32:
             raise CryptoAPIException(
@@ -131,28 +176,15 @@ async def secure_file_receive(req: SecureReceiveRequest) -> SecureReceiveRespons
             )
 
         plaintext = cryptolab_core.aes_decrypt(
-            ciphertext + tag,
-            session_key,
-            "GCM",
-            iv,
-            None,
-            "None",
+            ciphertext + tag, session_key, "GCM", iv, None, "None",
         )
         digest = cryptolab_core.sha256_digest(plaintext)
         digest_ok = hmac.compare_digest(digest.hex(), expected_digest_hex)
         if not digest_ok:
             raise CryptoAPIException(StatusCode.DECRYPT_FAILED, "file digest mismatch")
 
-        public = req.sender_ecdsa_public
         signature_ok = bool(
-            cryptolab_core.ecdsa_verify(
-                digest,
-                r,
-                s,
-                _from_hex(public["qx_hex"], "sender_ecdsa_public.qx_hex"),
-                _from_hex(public["qy_hex"], "sender_ecdsa_public.qy_hex"),
-                public.get("curve", "secp160r1"),
-            )
+            cryptolab_core.ecdsa_verify(digest, r, s, ecc_qx, ecc_qy, ecc_curve)
         )
         if not signature_ok:
             raise CryptoAPIException(StatusCode.SIGNATURE_INVALID)

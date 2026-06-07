@@ -1,8 +1,11 @@
-"""Bridge for RSA / ECC / ECDSA to the Rust public-key primitives."""
+"""Bridge for RSA / ECC / ECDSA — key_id based flow."""
 
 from __future__ import annotations
 
+from sqlalchemy.orm import Session
+
 from app.core.exceptions import CryptoAPIException
+from app.core.security import AuthenticatedUser
 from app.core.status_codes import StatusCode
 from app.schemas.pubkey import (
     EccKeygenRequest,
@@ -22,9 +25,12 @@ from app.schemas.pubkey import (
     RsaVerifyRequest,
     RsaVerifyResponse,
 )
+from app.services import key_service
 
 
-async def rsa_keygen(req: RsaKeygenRequest) -> RsaKeygenResponse:
+async def rsa_keygen(
+    db: Session, user: AuthenticatedUser, req: RsaKeygenRequest
+) -> RsaKeygenResponse:
     try:
         import cryptolab_core
 
@@ -34,27 +40,34 @@ async def rsa_keygen(req: RsaKeygenRequest) -> RsaKeygenResponse:
     except Exception as exc:
         raise CryptoAPIException(StatusCode.CRYPTO_LIB_ERROR) from exc
 
+    private_material = {
+        "n_hex": n.hex(),
+        "e_hex": e.hex(),
+        "d_hex": d.hex(),
+        "p_hex": p.hex(),
+        "q_hex": q.hex(),
+    }
+    public_material = {"n_hex": n.hex(), "e_hex": e.hex()}
+
+    priv_id, pub_id = key_service.store_key_pair(
+        db, user, "rsa", private_material, public_material, req.label
+    )
     return RsaKeygenResponse(
-        n_hex=n.hex(),
-        e_hex=e.hex(),
-        d_hex=d.hex(),
-        p_hex=p.hex(),
-        q_hex=q.hex(),
-        warning=(
-            "Private key is returned for demo only; production should store encrypted "
-            "private key and return key_id"
-        ),
+        private_key_id=priv_id, public_key_id=pub_id, bits=req.bits
     )
 
 
-async def rsa_encrypt(req: RsaEncryptRequest) -> RsaEncryptResponse:
+async def rsa_encrypt(
+    db: Session, user: AuthenticatedUser, req: RsaEncryptRequest
+) -> RsaEncryptResponse:
+    mat = key_service.fetch_and_decrypt_json(db, user, req.key_id, "public")
     try:
         import cryptolab_core
 
         ciphertext = cryptolab_core.rsa_encrypt_oaep(
             req.plaintext.encode("utf-8"),
-            _from_hex(req.n_hex, "n_hex"),
-            _from_hex(req.e_hex, "e_hex"),
+            _hex(mat, "n_hex"),
+            _hex(mat, "e_hex"),
         )
     except ValueError as exc:
         raise CryptoAPIException(StatusCode.ENCRYPT_FAILED, str(exc)) from exc
@@ -63,16 +76,19 @@ async def rsa_encrypt(req: RsaEncryptRequest) -> RsaEncryptResponse:
     return RsaEncryptResponse(ciphertext_hex=ciphertext.hex())
 
 
-async def rsa_decrypt(req: RsaDecryptRequest) -> RsaDecryptResponse:
+async def rsa_decrypt(
+    db: Session, user: AuthenticatedUser, req: RsaDecryptRequest
+) -> RsaDecryptResponse:
+    mat = key_service.fetch_and_decrypt_json(db, user, req.key_id, "private")
     try:
         import cryptolab_core
 
         plaintext = cryptolab_core.rsa_decrypt_oaep(
-            _from_hex(req.ciphertext_hex, "ciphertext_hex"),
-            _from_hex(req.n_hex, "n_hex"),
-            _from_hex(req.d_hex, "d_hex"),
-            _from_hex(req.p_hex, "p_hex"),
-            _from_hex(req.q_hex, "q_hex"),
+            bytes.fromhex(req.ciphertext_hex),
+            _hex(mat, "n_hex"),
+            _hex(mat, "d_hex"),
+            _hex(mat, "p_hex"),
+            _hex(mat, "q_hex"),
         )
     except ValueError as exc:
         raise CryptoAPIException(StatusCode.DECRYPT_FAILED, str(exc)) from exc
@@ -81,16 +97,19 @@ async def rsa_decrypt(req: RsaDecryptRequest) -> RsaDecryptResponse:
     return RsaDecryptResponse(plaintext=plaintext.decode("utf-8"))
 
 
-async def rsa_sign(req: RsaSignRequest) -> RsaSignResponse:
+async def rsa_sign(
+    db: Session, user: AuthenticatedUser, req: RsaSignRequest
+) -> RsaSignResponse:
+    mat = key_service.fetch_and_decrypt_json(db, user, req.key_id, "private")
     try:
         import cryptolab_core
 
         signature = cryptolab_core.rsa_sign_pss(
             req.message.encode("utf-8"),
-            _from_hex(req.n_hex, "n_hex"),
-            _from_hex(req.d_hex, "d_hex"),
-            _from_hex(req.p_hex, "p_hex"),
-            _from_hex(req.q_hex, "q_hex"),
+            _hex(mat, "n_hex"),
+            _hex(mat, "d_hex"),
+            _hex(mat, "p_hex"),
+            _hex(mat, "q_hex"),
         )
     except ValueError as exc:
         raise CryptoAPIException(StatusCode.CRYPTO_LIB_ERROR, str(exc)) from exc
@@ -99,15 +118,18 @@ async def rsa_sign(req: RsaSignRequest) -> RsaSignResponse:
     return RsaSignResponse(signature_hex=signature.hex())
 
 
-async def rsa_verify(req: RsaVerifyRequest) -> RsaVerifyResponse:
+async def rsa_verify(
+    db: Session, user: AuthenticatedUser, req: RsaVerifyRequest
+) -> RsaVerifyResponse:
+    mat = key_service.fetch_and_decrypt_json(db, user, req.key_id, "public")
     try:
         import cryptolab_core
 
         valid = cryptolab_core.rsa_verify_pss(
             req.message.encode("utf-8"),
-            _from_hex(req.signature_hex, "signature_hex"),
-            _from_hex(req.n_hex, "n_hex"),
-            _from_hex(req.e_hex, "e_hex"),
+            bytes.fromhex(req.signature_hex),
+            _hex(mat, "n_hex"),
+            _hex(mat, "e_hex"),
         )
     except ValueError:
         return RsaVerifyResponse(valid=False)
@@ -116,7 +138,9 @@ async def rsa_verify(req: RsaVerifyRequest) -> RsaVerifyResponse:
     return RsaVerifyResponse(valid=bool(valid))
 
 
-async def ecc_keygen(req: EccKeygenRequest) -> EccKeygenResponse:
+async def ecc_keygen(
+    db: Session, user: AuthenticatedUser, req: EccKeygenRequest
+) -> EccKeygenResponse:
     try:
         import cryptolab_core
 
@@ -125,16 +149,28 @@ async def ecc_keygen(req: EccKeygenRequest) -> EccKeygenResponse:
         raise CryptoAPIException(StatusCode.PARAM_MISSING, str(exc)) from exc
     except Exception as exc:
         raise CryptoAPIException(StatusCode.CRYPTO_LIB_ERROR) from exc
-    return EccKeygenResponse(curve=req.curve, d_hex=d.hex(), qx_hex=qx.hex(), qy_hex=qy.hex())
+
+    private_material = {"d_hex": d.hex(), "curve": req.curve}
+    public_material = {"qx_hex": qx.hex(), "qy_hex": qy.hex(), "curve": req.curve}
+
+    priv_id, pub_id = key_service.store_key_pair(
+        db, user, "ecc", private_material, public_material, req.label
+    )
+    return EccKeygenResponse(
+        private_key_id=priv_id, public_key_id=pub_id, curve=req.curve
+    )
 
 
-async def ecdsa_sign(req: EcdsaSignRequest) -> EcdsaSignResponse:
+async def ecdsa_sign(
+    db: Session, user: AuthenticatedUser, req: EcdsaSignRequest
+) -> EcdsaSignResponse:
+    mat = key_service.fetch_and_decrypt_json(db, user, req.key_id, "private")
     try:
         import cryptolab_core
 
         r, s = cryptolab_core.ecdsa_sign(
             req.message.encode("utf-8"),
-            _from_hex(req.d_hex, "d_hex"),
+            _hex(mat, "d_hex"),
             req.curve,
         )
     except ValueError as exc:
@@ -144,16 +180,19 @@ async def ecdsa_sign(req: EcdsaSignRequest) -> EcdsaSignResponse:
     return EcdsaSignResponse(r_hex=r.hex(), s_hex=s.hex(), curve=req.curve)
 
 
-async def ecdsa_verify(req: EcdsaVerifyRequest) -> EcdsaVerifyResponse:
+async def ecdsa_verify(
+    db: Session, user: AuthenticatedUser, req: EcdsaVerifyRequest
+) -> EcdsaVerifyResponse:
+    mat = key_service.fetch_and_decrypt_json(db, user, req.key_id, "public")
     try:
         import cryptolab_core
 
         valid = cryptolab_core.ecdsa_verify(
             req.message.encode("utf-8"),
-            _from_hex(req.r_hex, "r_hex"),
-            _from_hex(req.s_hex, "s_hex"),
-            _from_hex(req.qx_hex, "qx_hex"),
-            _from_hex(req.qy_hex, "qy_hex"),
+            bytes.fromhex(req.r_hex),
+            bytes.fromhex(req.s_hex),
+            _hex(mat, "qx_hex"),
+            _hex(mat, "qy_hex"),
             req.curve,
         )
     except ValueError:
@@ -163,8 +202,8 @@ async def ecdsa_verify(req: EcdsaVerifyRequest) -> EcdsaVerifyResponse:
     return EcdsaVerifyResponse(valid=bool(valid), curve=req.curve)
 
 
-def _from_hex(value: str, field: str) -> bytes:
+def _hex(mat: dict[str, str], key: str) -> bytes:
     try:
-        return bytes.fromhex(value)
-    except ValueError as exc:
-        raise CryptoAPIException(StatusCode.ENCODING_ERROR, f"{field} must be hex") from exc
+        return bytes.fromhex(mat[key])
+    except (KeyError, ValueError) as exc:
+        raise CryptoAPIException(StatusCode.INTERNAL, f"corrupt key material: {key}") from exc

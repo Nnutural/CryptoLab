@@ -1,10 +1,13 @@
-"""Public-key endpoints: RSA, ECC, ECDSA."""
+"""Public-key endpoints: RSA, ECC, ECDSA — key_id based."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
+from sqlalchemy.orm import Session
 
 from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
+from app.db.session import get_db
+from app.middleware.auth import get_current_user
 from app.schemas.common import APIResponse
 from app.schemas.pubkey import (
     EccKeygenRequest,
@@ -27,14 +30,18 @@ from app.schemas.pubkey import (
 from app.services import pubkey_service
 
 router = APIRouter()
+USER_DEP = Depends(get_current_user)
+DB_DEP = Depends(get_db)
 
 
 @router.post("/rsa/keygen", response_model=APIResponse[RsaKeygenResponse])
 async def rsa_keygen(
     request: Request,
     req: RsaKeygenRequest,
+    user=USER_DEP,
+    db: Session = DB_DEP,
 ) -> APIResponse[RsaKeygenResponse]:
-    result = await pubkey_service.rsa_keygen(req)
+    result = await pubkey_service.rsa_keygen(db, user, req)
     return _ok(request, result)
 
 
@@ -42,8 +49,10 @@ async def rsa_keygen(
 async def rsa_encrypt(
     request: Request,
     req: RsaEncryptRequest,
+    user=USER_DEP,
+    db: Session = DB_DEP,
 ) -> APIResponse[RsaEncryptResponse]:
-    result = await pubkey_service.rsa_encrypt(req)
+    result = await pubkey_service.rsa_encrypt(db, user, req)
     return _ok(request, result)
 
 
@@ -51,8 +60,10 @@ async def rsa_encrypt(
 async def rsa_decrypt(
     request: Request,
     req: RsaDecryptRequest,
+    user=USER_DEP,
+    db: Session = DB_DEP,
 ) -> APIResponse[RsaDecryptResponse]:
-    result = await pubkey_service.rsa_decrypt(req)
+    result = await pubkey_service.rsa_decrypt(db, user, req)
     return _ok(request, result)
 
 
@@ -60,8 +71,10 @@ async def rsa_decrypt(
 async def rsa_sign(
     request: Request,
     req: RsaSignRequest,
+    user=USER_DEP,
+    db: Session = DB_DEP,
 ) -> APIResponse[RsaSignResponse]:
-    result = await pubkey_service.rsa_sign(req)
+    result = await pubkey_service.rsa_sign(db, user, req)
     return _ok(request, result)
 
 
@@ -69,8 +82,10 @@ async def rsa_sign(
 async def rsa_verify(
     request: Request,
     req: RsaVerifyRequest,
+    user=USER_DEP,
+    db: Session = DB_DEP,
 ) -> APIResponse[RsaVerifyResponse]:
-    result = await pubkey_service.rsa_verify(req)
+    result = await pubkey_service.rsa_verify(db, user, req)
     return _ok(request, result)
 
 
@@ -78,8 +93,10 @@ async def rsa_verify(
 async def ecc_keygen(
     request: Request,
     req: EccKeygenRequest,
+    user=USER_DEP,
+    db: Session = DB_DEP,
 ) -> APIResponse[EccKeygenResponse]:
-    result = await pubkey_service.ecc_keygen(req)
+    result = await pubkey_service.ecc_keygen(db, user, req)
     return _ok(request, result)
 
 
@@ -87,8 +104,10 @@ async def ecc_keygen(
 async def ecdsa_sign(
     request: Request,
     req: EcdsaSignRequest,
+    user=USER_DEP,
+    db: Session = DB_DEP,
 ) -> APIResponse[EcdsaSignResponse]:
-    result = await pubkey_service.ecdsa_sign(req)
+    result = await pubkey_service.ecdsa_sign(db, user, req)
     return _ok(request, result)
 
 
@@ -96,24 +115,14 @@ async def ecdsa_sign(
 async def ecdsa_verify(
     request: Request,
     req: EcdsaVerifyRequest,
+    user=USER_DEP,
+    db: Session = DB_DEP,
 ) -> APIResponse[EcdsaVerifyResponse]:
-    result = await pubkey_service.ecdsa_verify(req)
+    result = await pubkey_service.ecdsa_verify(db, user, req)
     return _ok(request, result)
 
 
-def _ok(
-    request: Request,
-    data: (
-        RsaKeygenResponse
-        | RsaEncryptResponse
-        | RsaDecryptResponse
-        | RsaSignResponse
-        | RsaVerifyResponse
-        | EccKeygenResponse
-        | EcdsaSignResponse
-        | EcdsaVerifyResponse
-    ),
-) -> APIResponse:
+def _ok(request: Request, data: object) -> APIResponse:
     return APIResponse(
         code=StatusCode.OK,
         message=DEFAULT_MESSAGES[StatusCode.OK],

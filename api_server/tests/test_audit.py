@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from collections.abc import Callable
 
 import httpx
 
@@ -12,16 +13,24 @@ HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 async def test_audit_log_emitted_on_encrypt(
     client: httpx.AsyncClient,
-    auth_headers,
+    auth_headers: Callable,
+    store_sym_key: Callable,
 ) -> None:
-    client.headers.update(await auth_headers(client, "audit-user"))
+    headers = await auth_headers(client, "audit-user")
+    client.headers.update(headers)
+
+    me = await client.get("/api/v1/auth/me")
+    uid = me.json()["data"]["user_id"]
+
+    kid = store_sym_key(uid, "aes", bytes(16))
+
     encrypted = await client.post(
         "/api/v1/symmetric/aes/encrypt",
         json={
             "algorithm": "aes",
             "mode": "GCM",
             "padding": "None",
-            "key_hex": "00" * 16,
+            "key_id": kid,
             "iv_hex": "00" * 12,
             "plaintext_b64": "aGVsbG8=",
         },
@@ -41,8 +50,7 @@ async def test_audit_log_emitted_on_encrypt(
     row = logs[0]
     assert row["trace_id"] == trace_id
     assert row["operation"] == "aes_encrypt"
-    assert row["algorithm"] == "AES-128-GCM"
+    assert row["algorithm"] == "AES-GCM"
     assert HEX64.fullmatch(row["input_hash"])
     assert HEX64.fullmatch(row["output_hash"])
-    assert row["input_hash"] != "hello"
-    assert row["output_hash"] != encrypted.json()["data"]["ciphertext_b64"]
+    assert row["key_id"] == kid

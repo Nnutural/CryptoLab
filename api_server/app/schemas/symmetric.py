@@ -1,4 +1,4 @@
-"""Symmetric-cipher DTOs."""
+"""Symmetric-cipher DTOs — key_id based."""
 
 from __future__ import annotations
 
@@ -17,18 +17,12 @@ class _SymmetricBase(BaseModel):
     algorithm: AlgorithmName
     mode: ModeName
     padding: PaddingName = "PKCS7"
-    key_hex: str
+    key_id: str
     iv_hex: str | None = None
     aad_b64: str | None = None
 
     @model_validator(mode="after")
-    def validate_lengths(self) -> _SymmetricBase:
-        key = _decode_hex(self.key_hex, "key_hex")
-        if len(key) not in {16, 24, 32}:
-            raise ValueError("key length must be 16, 24, or 32 bytes")
-        if self.algorithm in {"sm4", "rc6"} and len(key) != 16:
-            raise ValueError(f"{self.algorithm.upper()} key length must be 16 bytes")
-
+    def validate_mode_params(self) -> _SymmetricBase:
         if self.mode in {"CBC", "CTR"}:
             iv = self._required_iv()
             if len(iv) != 16:
@@ -45,9 +39,6 @@ class _SymmetricBase(BaseModel):
         if self.aad_b64 is not None:
             _decode_b64(self.aad_b64, "aad_b64")
         return self
-
-    def key_bytes(self) -> bytes:
-        return _decode_hex(self.key_hex, "key_hex")
 
     def iv_bytes(self) -> bytes | None:
         if self.iv_hex is None:

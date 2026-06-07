@@ -51,7 +51,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
                         user_id=user_id,
                         operation=operation,
                         algorithm=_algorithm_from_path(request.url.path, payload),
-                        key_id=None,
+                        key_id=_extract_key_id(payload),
                         input_bytes=request_body,
                         output_bytes=response_body,
                         status_code=response.status_code,
@@ -103,9 +103,7 @@ def _algorithm_from_path(path: str, payload: dict[str, Any]) -> str | None:
     if len(parts) >= 5 and parts[2] == "symmetric":
         algo = parts[3].upper()
         mode = str(payload.get("mode", "")).upper()
-        key_hex = str(payload.get("key_hex", ""))
-        bits = len(key_hex) * 4 if key_hex else None
-        return f"{algo}-{bits}-{mode}" if bits and mode else f"{algo}-{mode or 'unknown'}"
+        return f"{algo}-{mode}" if mode else algo
     if len(parts) >= 5 and parts[2] == "pubkey":
         family = parts[3]
         action = parts[4]
@@ -123,6 +121,10 @@ def _algorithm_from_path(path: str, payload: dict[str, Any]) -> str | None:
     if path.startswith("/api/v1/scenarios/secure_file_transfer/"):
         return "RSA-OAEP-SHA256+AES-256-GCM+ECDSA-secp160r1-SHA256"
     return None
+
+
+def _extract_key_id(payload: dict[str, Any]) -> str | None:
+    return payload.get("key_id") or payload.get("private_key_id") or None
 
 
 def _client_ip(request: Request) -> str | None:

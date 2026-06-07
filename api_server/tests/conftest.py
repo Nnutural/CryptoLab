@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import importlib
 from collections.abc import AsyncIterator, Awaitable, Callable
+from datetime import UTC, datetime
 
 import httpx
 import pytest
 
-from app.db.session import reset_database
+from app.core.kek import reset_kek_cache
+from app.core.security import AuthenticatedUser
+from app.db.session import get_session_factory, reset_database
 from app.main import app
+from app.services import key_service
 
 importlib.import_module("app.models")
 
@@ -51,6 +55,7 @@ class FakeRedisCache:
 async def isolated_state() -> AsyncIterator[None]:
     """Give every test a fresh DB schema and fakeredis instance."""
     reset_database("sqlite://")
+    reset_kek_cache()
     cache = FakeRedisCache()
     app.state.cache = cache
     yield
@@ -84,3 +89,47 @@ def auth_headers() -> Callable[[httpx.AsyncClient, str], Awaitable[dict[str, str
         return {"Authorization": f"Bearer {token}"}
 
     return _make
+
+
+def _fake_user(user_id: int) -> AuthenticatedUser:
+    return AuthenticatedUser(
+        id=user_id, username="test", role="user",
+        jti="fake", token="fake", expires_at=datetime.now(UTC),
+    )
+
+
+@pytest.fixture
+def store_sym_key() -> Callable[[int, str, bytes, str | None], str]:
+    """Store a known symmetric key via key_service, return key_id."""
+
+    def _store(
+        user_id: int, algorithm: str, key_bytes: bytes, label: str | None = None
+    ) -> str:
+        with get_session_factory()() as db:
+            return key_service.store_symmetric_key(
+                db, _fake_user(user_id), algorithm, key_bytes, label
+            )
+
+    return _store
+
+
+@pytest.fixture
+def store_key_pair() -> Callable[
+    [int, str, dict[str, str], dict[str, str], str | None], tuple[str, str]
+]:
+    """Store an asymmetric key pair via key_service, return (priv_id, pub_id)."""
+
+    def _store(
+        user_id: int,
+        algorithm: str,
+        private_material: dict[str, str],
+        public_material: dict[str, str],
+        label: str | None = None,
+    ) -> tuple[str, str]:
+        with get_session_factory()() as db:
+            return key_service.store_key_pair(
+                db, _fake_user(user_id), algorithm,
+                private_material, public_material, label,
+            )
+
+    return _store
