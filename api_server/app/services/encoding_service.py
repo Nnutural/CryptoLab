@@ -32,5 +32,31 @@ async def base64_decode(req: DecodeRequest) -> DecodeResponse:
     return DecodeResponse(data=data)
 
 
-async def utf8(_op: str, _req: object) -> object:
-    raise NotImplementedError("cryptolab_core.utf8_{encode,decode}")
+async def utf8_encode_op(req: EncodeRequest) -> EncodeResponse:
+    """Validate and re-encode a UTF-8 string through Rust, returning Base64 bytes."""
+    try:
+        import cryptolab_core
+
+        raw = cryptolab_core.utf8_encode(req.data.encode("utf-8"))
+        encoded = cryptolab_core.base64_encode(raw)
+    except ValueError as exc:
+        raise CryptoAPIException(StatusCode.ENCODING_ERROR, str(exc)) from exc
+    except Exception as exc:
+        raise CryptoAPIException(StatusCode.CRYPTO_LIB_ERROR) from exc
+    return EncodeResponse(encoded=encoded)
+
+
+async def utf8_decode_op(req: EncodeRequest | DecodeRequest) -> DecodeResponse:
+    """Decode Base64-wrapped bytes after strict Rust UTF-8 validation."""
+    encoded = req.data if isinstance(req, EncodeRequest) else req.encoded
+    try:
+        import cryptolab_core
+
+        raw = cryptolab_core.base64_decode(encoded)
+        decoded = cryptolab_core.utf8_decode(raw)
+        data = decoded.decode("utf-8")
+    except ValueError as exc:
+        raise CryptoAPIException(StatusCode.ENCODING_ERROR, str(exc)) from exc
+    except Exception as exc:
+        raise CryptoAPIException(StatusCode.CRYPTO_LIB_ERROR) from exc
+    return DecodeResponse(data=data)

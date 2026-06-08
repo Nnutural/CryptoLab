@@ -74,3 +74,33 @@ async def test_base64_random_binary_decode_roundtrip(client: httpx.AsyncClient) 
     body = response.json()
     assert body["code"] == 1000
     assert base64.b64decode(body["data"]["data"]) == payload
+
+
+async def test_utf8_encode_chinese_returns_base64_bytes(client: httpx.AsyncClient) -> None:
+    response = await client.post("/api/v1/encoding/utf8/encode", json={"data": "你好"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["code"] == 1000
+    assert base64.b64decode(body["data"]["encoded"]) == "你好".encode("utf-8")
+
+
+async def test_utf8_decode_base64_bytes_returns_text(client: httpx.AsyncClient) -> None:
+    text = "a你𝄞"
+    encoded = base64.b64encode(text.encode("utf-8")).decode("ascii")
+
+    response = await client.post("/api/v1/encoding/utf8/decode", json={"data": encoded})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["code"] == 1000
+    assert body["data"]["data"] == text
+
+
+async def test_utf8_decode_invalid_returns_encoding_error(client: httpx.AsyncClient) -> None:
+    overlong_nul = base64.b64encode(bytes([0xC0, 0x80])).decode("ascii")
+
+    response = await client.post("/api/v1/encoding/utf8/decode", json={"data": overlong_nul})
+
+    assert response.status_code == 400
+    assert response.json()["code"] == 2003

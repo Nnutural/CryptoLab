@@ -329,13 +329,15 @@ fn base64_decode<'py>(py: Python<'py>, encoded: &str) -> PyResult<&'py PyBytes> 
 }
 
 #[pyfunction]
-fn utf8_encode<'py>(py: Python<'py>, text: &str) -> PyResult<&'py PyBytes> {
-    Ok(PyBytes::new(py, &crate::encoding::utf8::encode(text)))
+fn utf8_encode<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
+    let text = crate::encoding::utf8::decode(data)?;
+    Ok(PyBytes::new(py, &crate::encoding::utf8::encode(&text)))
 }
 
 #[pyfunction]
-fn utf8_decode(data: &[u8]) -> PyResult<String> {
-    crate::encoding::utf8::decode(data).map_err(Into::into)
+fn utf8_decode<'py>(py: Python<'py>, data: &[u8]) -> PyResult<&'py PyBytes> {
+    let text = crate::encoding::utf8::decode(data)?;
+    Ok(PyBytes::new(py, &crate::encoding::utf8::encode(&text)))
 }
 
 // =========================================================================

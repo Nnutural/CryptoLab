@@ -39,14 +39,28 @@ async def base64(
     )
 
 
-@router.post("/utf8/{op}", response_model=APIResponse[dict[str, str]])
+@router.post("/utf8/{op}", response_model=APIResponse[EncodeResponse | DecodeResponse])
 async def utf8(
     request: Request,
     op: str = OP,
-    _req: dict[str, str] | None = None,
-) -> APIResponse[dict[str, str]]:
+    req: EncodeRequest | DecodeRequest | None = None,
+) -> APIResponse[EncodeResponse | DecodeResponse]:
     """UTF-8 encode (str → bytes) / decode (bytes → str)."""
-    raise CryptoAPIException(
-        StatusCode.ALGORITHM_UNSUPPORTED,
-        f"UTF-8 {op} is not implemented in this phase",
+    if op == "encode":
+        if not isinstance(req, EncodeRequest):
+            raise CryptoAPIException(StatusCode.PARAM_MISSING, "EncodeRequest.data is required")
+        result = await encoding_service.utf8_encode_op(req)
+    else:
+        if not isinstance(req, EncodeRequest | DecodeRequest):
+            raise CryptoAPIException(
+                StatusCode.PARAM_MISSING,
+                "EncodeRequest.data or DecodeRequest.encoded is required",
+            )
+        result = await encoding_service.utf8_decode_op(req)
+
+    return APIResponse(
+        code=StatusCode.OK,
+        message=DEFAULT_MESSAGES[StatusCode.OK],
+        data=result,
+        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
     )
