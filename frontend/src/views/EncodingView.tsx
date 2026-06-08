@@ -9,6 +9,17 @@ import client, { type APIResponse } from "@/api/client";
 
 type Mode = "base64" | "utf8";
 
+function decodeBase64Text(value: string): string {
+  try {
+    const binary = atob(value);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return value;
+  }
+}
+
 export function EncodingView() {
   const meta = ROUTE_TITLES.encoding;
   const [mode, setMode] = useState<Mode>("base64");
@@ -62,7 +73,8 @@ export function EncodingView() {
         mode === "base64" ? base64Decode(encoded) : utf8Call("decode", { data: encoded }),
       );
       if (data) {
-        const result = data.decoded ?? data.data ?? data.result ?? data.output ?? "";
+        const raw = data.decoded ?? data.data ?? data.result ?? data.output ?? "";
+        const result = mode === "base64" ? decodeBase64Text(String(raw)) : raw;
         setPlain(String(result));
       }
     } finally {

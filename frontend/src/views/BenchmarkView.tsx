@@ -73,7 +73,9 @@ export function BenchmarkView() {
         if (resp.code === 1000 && resp.data) {
           const d = resp.data as {
             algorithm?: string;
+            throughput_mb_per_s?: number;
             throughput_mbps?: number;
+            total_ms?: number;
             latency_ms_p50?: number;
             latency_ms_p95?: number;
             iterations?: number;
@@ -81,8 +83,18 @@ export function BenchmarkView() {
           };
           accumulated.push({
             ...base,
-            throughput: typeof d.throughput_mbps === "number" ? d.throughput_mbps : base.throughput,
-            ms: typeof d.latency_ms_p50 === "number" ? d.latency_ms_p50 : base.ms,
+            throughput:
+              typeof d.throughput_mb_per_s === "number"
+                ? d.throughput_mb_per_s
+                : typeof d.throughput_mbps === "number"
+                ? d.throughput_mbps
+                : base.throughput,
+            ms:
+              typeof d.total_ms === "number"
+                ? d.total_ms
+                : typeof d.latency_ms_p50 === "number"
+                ? d.latency_ms_p50
+                : base.ms,
             iterations: d.iterations,
             dataSizeBytes: d.data_size_bytes,
           });

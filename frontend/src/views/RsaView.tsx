@@ -7,16 +7,37 @@ import { HexViewer } from "@/components/shared/HexViewer";
 import { OperationTimer } from "@/components/shared/OperationTimer";
 import { ROUTE_TITLES } from "@/components/nav";
 import { rsaKeygen, rsaEncrypt, rsaDecrypt, rsaSign, rsaVerify } from "@/api/pubkey";
-import { listKeys } from "@/api/keys";
+import { getKeyPublic, listKeys } from "@/api/keys";
 
 interface RsaKey {
   key_id: string;
+  private_key_id: string;
+  public_key_id: string;
   label?: string;
   algorithm?: string;
   public_key_pem?: string;
   n_hex?: string;
   e_hex?: string;
   bits?: number;
+}
+
+function getKeyType(row: any): string {
+  return String(row?.key_type ?? row?.type ?? "").toLowerCase();
+}
+
+async function fetchRsaPublicMaterial(publicKeyId: string): Promise<Partial<RsaKey>> {
+  try {
+    const resp = await getKeyPublic(publicKeyId);
+    if (resp.code !== 1000) return {};
+    const material = (resp.data as any)?.material ?? {};
+    return {
+      n_hex: material.n_hex,
+      e_hex: material.e_hex,
+      public_key_pem: material.public_key_pem,
+    };
+  } catch {
+    return {};
+  }
 }
 
 export function RsaView() {
@@ -31,17 +52,19 @@ export function RsaView() {
     try {
       const resp = await listKeys();
       if (resp.code === 1000 && Array.isArray(resp.data)) {
-        const rsaKeys = resp.data.filter((k: any) => k.algorithm === "RSA");
-        if (rsaKeys.length > 0) {
-          const first = rsaKeys[0];
+        const rsaKeys = resp.data.filter((k: any) => String(k.algorithm || "").toLowerCase() === "rsa");
+        const privateKey = rsaKeys.find((k: any) => getKeyType(k) === "private");
+        const publicKey = rsaKeys.find((k: any) => getKeyType(k) === "public");
+        if (privateKey && publicKey) {
+          const publicMaterial = await fetchRsaPublicMaterial(publicKey.key_id);
           setKeyInfo({
-            key_id: first.key_id,
-            label: first.label,
-            algorithm: first.algorithm,
-            public_key_pem: first.public_key_pem,
-            n_hex: first.n_hex,
-            e_hex: first.e_hex,
-            bits: first.bits,
+            key_id: privateKey.key_id,
+            private_key_id: privateKey.key_id,
+            public_key_id: publicKey.key_id,
+            label: privateKey.label,
+            algorithm: privateKey.algorithm,
+            bits: privateKey.bits,
+            ...publicMaterial,
           });
           setHasKey(true);
         } else {
@@ -65,13 +88,14 @@ export function RsaView() {
       const resp = await rsaKeygen({ bits: 1024, e: 65537, label: `rsa-${Date.now()}` });
       if (resp.code === 1000) {
         const data = resp.data;
+        const publicMaterial = await fetchRsaPublicMaterial(data.public_key_id);
         setKeyInfo({
-          key_id: data.key_id,
-          public_key_pem: data.public_key_pem,
-          n_hex: data.n_hex,
-          e_hex: data.e_hex,
+          key_id: data.private_key_id,
+          private_key_id: data.private_key_id,
+          public_key_id: data.public_key_id,
           bits: data.bits,
           algorithm: "RSA",
+          ...publicMaterial,
         });
         setHasKey(true);
       } else {
@@ -173,12 +197,16 @@ export function RsaView() {
         ))}
       </div>
 
-      {tab === "enc" ? <EncPanel keyId={keyInfo?.key_id || ""} /> : <SignPanel keyId={keyInfo?.key_id || ""} />}
+      {tab === "enc" ? (
+        <EncPanel privateKeyId={keyInfo?.private_key_id || ""} publicKeyId={keyInfo?.public_key_id || ""} />
+      ) : (
+        <SignPanel privateKeyId={keyInfo?.private_key_id || ""} publicKeyId={keyInfo?.public_key_id || ""} />
+      )}
     </>
   );
 }
 
-function EncPanel({ keyId }: { keyId: string }) {
+function EncPanel({ privateKeyId, publicKeyId }: { privateKeyId: string; publicKeyId: string }) {
   const [dir, setDir] = useState<"enc" | "dec">("enc");
   const [text, setText] = useState("Secret message");
   const [loading, setLoading] = useState(false);
@@ -186,6 +214,7 @@ function EncPanel({ keyId }: { keyId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const run = async () => {
+    const keyId = dir === "enc" ? publicKeyId : privateKeyId;
     if (!keyId) {
       setError("请先生成 RSA 密钥对");
       return;
@@ -197,14 +226,14 @@ function EncPanel({ keyId }: { keyId: string }) {
       if (dir === "enc") {
         const resp = await rsaEncrypt({ plaintext: text, key_id: keyId });
         if (resp.code === 1000) {
-          setResult({ hex: resp.data.ciphertext_hex, ms: resp.data.duration_ms });
+          setResult({ hex: resp.data.ciphertext_hex, ms: resp.data.duration_ms ?? 0 });
         } else {
           setError(resp.message || "加密失败");
         }
       } else {
         const resp = await rsaDecrypt({ ciphertext_hex: text, key_id: keyId });
         if (resp.code === 1000) {
-          setResult({ hex: resp.data.plaintext, ms: resp.data.duration_ms });
+          setResult({ hex: resp.data.plaintext, ms: resp.data.duration_ms ?? 0 });
         } else {
           setError(resp.message || "解密失败");
         }
@@ -236,7 +265,7 @@ function EncPanel({ keyId }: { keyId: string }) {
         </div>
         <Field label="密钥 ID">
           <TextInput
-            value={keyId || "(尚未生成密钥)"}
+            value={(dir === "enc" ? publicKeyId : privateKeyId) || "(尚未生成密钥)"}
             readOnly
             className="font-mono"
           />
@@ -271,7 +300,7 @@ function EncPanel({ keyId }: { keyId: string }) {
   );
 }
 
-function SignPanel({ keyId }: { keyId: string }) {
+function SignPanel({ privateKeyId, publicKeyId }: { privateKeyId: string; publicKeyId: string }) {
   const [dir, setDir] = useState<"sign" | "verify">("sign");
   const [msg, setMsg] = useState("Important document content");
   const [sig, setSig] = useState("");
@@ -282,6 +311,7 @@ function SignPanel({ keyId }: { keyId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const run = async () => {
+    const keyId = dir === "sign" ? privateKeyId : publicKeyId;
     if (!keyId) {
       setError("请先生成 RSA 密钥对");
       return;
@@ -294,7 +324,7 @@ function SignPanel({ keyId }: { keyId: string }) {
       if (dir === "sign") {
         const resp = await rsaSign({ message: msg, key_id: keyId });
         if (resp.code === 1000) {
-          setSignResult({ hex: resp.data.signature_hex, ms: resp.data.duration_ms });
+          setSignResult({ hex: resp.data.signature_hex, ms: resp.data.duration_ms ?? 0 });
           setSig(resp.data.signature_hex);
         } else {
           setError(resp.message || "签名失败");
@@ -303,7 +333,7 @@ function SignPanel({ keyId }: { keyId: string }) {
         const messageToVerify = tamper ? `${msg}_tampered` : msg;
         const resp = await rsaVerify({ message: messageToVerify, signature_hex: sig, key_id: keyId });
         if (resp.code === 1000) {
-          setVerifyResult({ valid: !!resp.data.valid, ms: resp.data.duration_ms });
+          setVerifyResult({ valid: !!resp.data.valid, ms: resp.data.duration_ms ?? 0 });
         } else {
           setError(resp.message || "验签失败");
         }

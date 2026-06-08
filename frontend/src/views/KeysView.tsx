@@ -12,17 +12,23 @@ interface KeyItem {
   algo: string;
   label: string;
   pair: string | null;
+  pairId: string | null;
   created: string;
+  expires: string;
 }
 
 interface BackendKey {
-  key_id: string;
-  algorithm: string;
+  id?: string;
+  key_id?: string;
+  key_type?: string;
+  algorithm?: string;
   key_size?: number;
-  label?: string;
+  label?: string | null;
   created_at?: string;
+  expires_at?: string | null;
   status?: string;
-  pair_id?: string;
+  paired_key_id?: string | null;
+  pair_id?: string | null;
   type?: string;
 }
 
@@ -54,14 +60,15 @@ function deriveType(raw: BackendKey): KeyItem["type"] {
   if (raw.type === "symmetric" || raw.type === "rsa_public" || raw.type === "rsa_private" || raw.type === "ecc_public" || raw.type === "ecc_private") {
     return raw.type;
   }
+  const keyType = (raw.key_type || raw.type || "").toLowerCase();
   const algo = (raw.algorithm || "").toLowerCase();
+  if (keyType === "symmetric") return "symmetric";
   if (algo === "aes" || algo === "sm4" || algo === "rc6") return "symmetric";
   if (algo.startsWith("rsa")) {
-    // backend may distinguish via status / key_size — default to private (server-stored)
-    return "rsa_private";
+    return keyType === "public" ? "rsa_public" : "rsa_private";
   }
   if (algo.startsWith("ecc") || algo.startsWith("ecdsa")) {
-    return "ecc_private";
+    return keyType === "public" ? "ecc_public" : "ecc_private";
   }
   return "symmetric";
 }
@@ -73,13 +80,17 @@ function formatAlgo(raw: BackendKey): string {
 }
 
 function mapKey(raw: BackendKey): KeyItem {
+  const keyId = raw.key_id ?? raw.id ?? "";
+  const pairId = raw.pair_id ?? raw.paired_key_id ?? null;
   return {
-    id: raw.key_id,
+    id: keyId,
     type: deriveType(raw),
     algo: formatAlgo(raw),
     label: raw.label || "未命名密钥",
-    pair: raw.pair_id ? `${raw.pair_id.slice(0, 8)}…` : null,
+    pair: pairId ? `${pairId.slice(0, 8)}…` : null,
+    pairId,
     created: raw.created_at || "—",
+    expires: raw.expires_at || "永不过期",
   };
 }
 
@@ -150,14 +161,19 @@ export function KeysView() {
     }
   };
 
-  const handleViewPublic = async (keyId: string) => {
+  const handleViewPublic = async (item: KeyItem) => {
+    const keyId = item.type.endsWith("_private") ? item.pairId : item.id;
+    if (!keyId) {
+      setError("当前私钥没有配对公钥 ID");
+      return;
+    }
     try {
       setPublicLoading(true);
       setError(null);
       const resp = await getKeyPublic(keyId);
       if (resp.code === 1000) {
         const data: any = resp.data || {};
-        const material = data.public_key_pem || data.public_key || data.public_material || JSON.stringify(data, null, 2);
+        const material = data.material ?? data.public_key_pem ?? data.public_key ?? data.public_material ?? data;
         setPublicMaterial(typeof material === "string" ? material : JSON.stringify(material, null, 2));
       } else {
         setError(resp.message || "获取公钥材料失败");
@@ -296,7 +312,7 @@ export function KeysView() {
               {[
                 ["算法", selected.algo],
                 ["创建时间", selected.created],
-                ["过期时间", "永不过期"],
+                ["过期时间", selected.expires],
                 ["配对密钥", selected.pair ?? "—"],
                 ["KEK 包装", "已加密存储"],
               ].map(([k, v]) => (
@@ -323,7 +339,7 @@ export function KeysView() {
                 selected.type === "ecc_public" ||
                 selected.type === "rsa_private" ||
                 selected.type === "ecc_private") && (
-                <GhostButton onClick={() => handleViewPublic(selected.id)} disabled={publicLoading}>
+                <GhostButton onClick={() => handleViewPublic(selected)} disabled={publicLoading}>
                   <Download size={14} /> {publicLoading ? "加载中…" : "导出公钥材料"}
                 </GhostButton>
               )}

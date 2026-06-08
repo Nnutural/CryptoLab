@@ -74,16 +74,15 @@ export function AuditView() {
       setError(null);
       const filters: Record<string, any> = { limit: 50, offset: 0 };
       if (algorithmFilter !== "all") filters.algorithm = algorithmFilter;
-      if (statusFilter !== "all") {
-        if (statusFilter === "1000") filters.status = 1000;
-        // 4xxx pattern: leave status unset; backend handles range or filter client-side
-      }
-      if (startDate) filters.start_date = startDate;
-      if (endDate) filters.end_date = endDate;
+      if (startDate) filters.since = `${startDate}T00:00:00`;
+      if (endDate) filters.until = `${endDate}T23:59:59`;
 
       const resp = await getAuditLogs(filters);
       if (resp.code === 1000) {
         let data = Array.isArray(resp.data) ? resp.data : [];
+        if (statusFilter === "1000") {
+          data = data.filter((l: any) => l.status === 1000);
+        }
         if (statusFilter === "4xxx") {
           data = data.filter((l: any) => typeof l.status === "number" && l.status >= 4000 && l.status < 5000);
         }

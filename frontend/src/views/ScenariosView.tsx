@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Send,
   Upload,
@@ -19,6 +19,7 @@ import { Field, TextArea, PrimaryButton, GhostButton, Tag } from "@/components/s
 import { CopyButton } from "@/components/shared/CopyButton";
 import { ROUTE_TITLES } from "@/components/nav";
 import { secureFileSend, secureFileReceive } from "@/api/scenarios";
+import { listKeys } from "@/api/keys";
 
 const STEPS = [
   { key: "pub", icon: KeyRound, label: "获取接收方 RSA 公钥", detail: "RSA-1024", timingKey: "fetch_pubkey_ms" },
@@ -68,6 +69,13 @@ interface ReceiveResult {
   step_timings?: Record<string, number>;
 }
 
+interface ScenarioKeyIds {
+  rsaPublicId?: string;
+  rsaPrivateId?: string;
+  eccPublicId?: string;
+  eccPrivateId?: string;
+}
+
 function toBase64(text: string): string {
   try {
     const bytes = new TextEncoder().encode(text);
@@ -100,6 +108,7 @@ export function ScenariosView() {
   const [error, setError] = useState<string | null>(null);
   const [sendResult, setSendResult] = useState<SendResult | null>(null);
   const [receiveResult, setReceiveResult] = useState<ReceiveResult | null>(null);
+  const [keyIds, setKeyIds] = useState<ScenarioKeyIds>({});
 
   const activeSteps = mode === "send" ? STEPS : RECEIVE_STEPS;
   const done = mode === "send" ? !!sendResult : !!receiveResult;
@@ -111,6 +120,31 @@ export function ScenariosView() {
     setError(null);
   };
 
+  useEffect(() => {
+    const loadScenarioKeys = async () => {
+      try {
+        const resp = await listKeys();
+        if (resp.code !== 1000 || !Array.isArray(resp.data)) return;
+        const rows = resp.data as any[];
+        const findKey = (algorithm: string, type: string) =>
+          rows.find(
+            (k) =>
+              String(k.algorithm || "").toLowerCase() === algorithm &&
+              String(k.key_type ?? k.type ?? "").toLowerCase() === type,
+          )?.key_id;
+        setKeyIds({
+          rsaPublicId: findKey("rsa", "public"),
+          rsaPrivateId: findKey("rsa", "private"),
+          eccPublicId: findKey("ecc", "public"),
+          eccPrivateId: findKey("ecc", "private"),
+        });
+      } catch {
+        /* scenario can still report a missing-key error when executed */
+      }
+    };
+    loadScenarioKeys();
+  }, []);
+
   const animateSteps = async (count: number) => {
     for (let i = 0; i < count; i++) {
       setCurrentStep(i);
@@ -120,12 +154,19 @@ export function ScenariosView() {
   };
 
   const runSend = async () => {
+    if (!keyIds.rsaPublicId || !keyIds.eccPrivateId) {
+      setError("请先在 RSA 页面生成密钥对,并在 ECC 页面生成密钥对。发送需要 RSA 公钥和 ECC 私钥。");
+      return;
+    }
     try {
       setRunning(true);
       resetState();
       const animation = animateSteps(STEPS.length);
       const resp = await secureFileSend({
-        file_data_base64: toBase64(plaintext),
+        file_b64: toBase64(plaintext),
+        receiver_rsa_public_key_id: keyIds.rsaPublicId,
+        sender_ecdsa_private_key_id: keyIds.eccPrivateId,
+        sender_ecdsa_curve: "secp160r1",
       });
       await animation;
       if (resp.code === 1000) {
@@ -134,7 +175,9 @@ export function ScenariosView() {
         setSendResult({
           envelope,
           envelopeJson: JSON.stringify(envelope, null, 2),
-          step_timings: data?.step_timings ?? {},
+          step_timings: {
+            pack_ms: data?.sender_summary?.duration_ms ?? 0,
+          },
         });
       } else {
         setError(resp.message || "操作失败");
@@ -147,6 +190,10 @@ export function ScenariosView() {
   };
 
   const runReceive = async () => {
+    if (!keyIds.rsaPrivateId || !keyIds.eccPublicId) {
+      setError("请先在 RSA 页面生成密钥对,并在 ECC 页面生成密钥对。接收需要 RSA 私钥和 ECC 公钥。");
+      return;
+    }
     try {
       setRunning(true);
       resetState();
@@ -159,19 +206,29 @@ export function ScenariosView() {
         return;
       }
       const animation = animateSteps(RECEIVE_STEPS.length);
-      const resp = await secureFileReceive({ envelope });
+      const resp = await secureFileReceive({
+        envelope,
+        receiver_rsa_private_key_id: keyIds.rsaPrivateId,
+        sender_ecdsa_public_key_id: keyIds.eccPublicId,
+      });
       await animation;
       if (resp.code === 1000) {
         const data = resp.data as any;
+        const plaintextB64 = data?.plaintext_b64;
+        const verification = data?.verification ?? {};
+        const verified =
+          Object.keys(verification).length > 0 && Object.values(verification).every(Boolean);
         const decrypted =
-          typeof data?.decrypted_file_base64 === "string"
-            ? fromBase64(data.decrypted_file_base64)
+          typeof plaintextB64 === "string"
+            ? fromBase64(plaintextB64)
             : undefined;
         setReceiveResult({
-          verified: !!data?.verified,
-          decrypted_file_base64: data?.decrypted_file_base64,
+          verified,
+          decrypted_file_base64: plaintextB64,
           decrypted_text: decrypted,
-          step_timings: data?.step_timings ?? {},
+          step_timings: {
+            aes_decrypt_ms: data?.duration_ms ?? 0,
+          },
         });
       } else {
         setError(resp.message || "验证或解密失败");
@@ -240,7 +297,9 @@ export function ScenariosView() {
                 </Field>
                 <div className="flex items-center gap-2 text-xs text-[var(--cl-text-secondary)] mb-4">
                   <Tag tone="info">{new Blob([plaintext]).size} 字节</Tag>
-                  <Tag tone="neutral">接收方 KeyID c8f26274-…</Tag>
+                  <Tag tone="neutral">
+                    接收方 KeyID {keyIds.rsaPublicId ? `${keyIds.rsaPublicId.slice(0, 8)}…` : "未就绪"}
+                  </Tag>
                 </div>
                 <PrimaryButton onClick={run} loading={running} disabled={!plaintext}>
                   <Send size={14} /> 加密并打包安全信封

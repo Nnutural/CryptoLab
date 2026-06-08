@@ -7,16 +7,39 @@ import { HexViewer } from "@/components/shared/HexViewer";
 import { OperationTimer } from "@/components/shared/OperationTimer";
 import { ROUTE_TITLES } from "@/components/nav";
 import { eccKeygen, ecdsaSign, ecdsaVerify } from "@/api/pubkey";
-import { listKeys } from "@/api/keys";
+import { getKeyPublic, listKeys } from "@/api/keys";
 
 interface EccKey {
   key_id: string;
+  private_key_id: string;
+  public_key_id: string;
   label?: string;
   algorithm?: string;
   curve?: string;
   x_hex?: string;
   y_hex?: string;
   public_key_hex?: string;
+}
+
+function getKeyType(row: any): string {
+  return String(row?.key_type ?? row?.type ?? "").toLowerCase();
+}
+
+async function fetchEccPublicMaterial(publicKeyId: string): Promise<Partial<EccKey>> {
+  try {
+    const resp = await getKeyPublic(publicKeyId);
+    if (resp.code !== 1000) return {};
+    const material = (resp.data as any)?.material ?? {};
+    return {
+      x_hex: material.qx_hex,
+      y_hex: material.qy_hex,
+      curve: material.curve,
+      public_key_hex:
+        material.qx_hex && material.qy_hex ? `${material.qx_hex}${material.qy_hex}` : undefined,
+    };
+  } catch {
+    return {};
+  }
 }
 
 export function EccView() {
@@ -38,18 +61,20 @@ export function EccView() {
       const resp = await listKeys();
       if (resp.code === 1000 && Array.isArray(resp.data)) {
         const eccKeys = resp.data.filter(
-          (k: any) => k.algorithm === "ECC" || k.algorithm === "ECDSA" || (k.curve && typeof k.curve === "string")
+          (k: any) => ["ecc", "ecdsa"].includes(String(k.algorithm || "").toLowerCase()) || (k.curve && typeof k.curve === "string")
         );
-        if (eccKeys.length > 0) {
-          const first = eccKeys[0];
+        const privateKey = eccKeys.find((k: any) => getKeyType(k) === "private");
+        const publicKey = eccKeys.find((k: any) => getKeyType(k) === "public");
+        if (privateKey && publicKey) {
+          const publicMaterial = await fetchEccPublicMaterial(publicKey.key_id);
           setKeyInfo({
-            key_id: first.key_id,
-            label: first.label,
-            algorithm: first.algorithm,
-            curve: first.curve || "secp160r1",
-            x_hex: first.x_hex,
-            y_hex: first.y_hex,
-            public_key_hex: first.public_key_hex,
+            key_id: privateKey.key_id,
+            private_key_id: privateKey.key_id,
+            public_key_id: publicKey.key_id,
+            label: privateKey.label,
+            algorithm: privateKey.algorithm,
+            curve: publicMaterial.curve || "secp160r1",
+            ...publicMaterial,
           });
         } else {
           setKeyInfo(null);
@@ -71,13 +96,14 @@ export function EccView() {
       const resp = await eccKeygen({ curve: "secp160r1", label: `ecc-${Date.now()}` });
       if (resp.code === 1000) {
         const data = resp.data;
+        const publicMaterial = await fetchEccPublicMaterial(data.public_key_id);
         setKeyInfo({
-          key_id: data.key_id,
+          key_id: data.private_key_id,
+          private_key_id: data.private_key_id,
+          public_key_id: data.public_key_id,
           curve: data.curve,
-          x_hex: data.x_hex,
-          y_hex: data.y_hex,
-          public_key_hex: data.public_key_hex,
           algorithm: "ECC",
+          ...publicMaterial,
         });
       } else {
         setKeyError(resp.message || "生成密钥失败");
@@ -90,7 +116,8 @@ export function EccView() {
   };
 
   const run = async () => {
-    if (!keyInfo?.key_id) {
+    const keyId = dir === "sign" ? keyInfo?.private_key_id : keyInfo?.public_key_id;
+    if (!keyId) {
       setError("请先生成 ECC 密钥对");
       return;
     }
@@ -99,11 +126,11 @@ export function EccView() {
       setError(null);
       setSignResult(null);
       setVerifyResult(null);
-      const curve = keyInfo.curve || "secp160r1";
+      const curve = keyInfo?.curve || "secp160r1";
       if (dir === "sign") {
-        const resp = await ecdsaSign({ message: msg, key_id: keyInfo.key_id, curve });
+        const resp = await ecdsaSign({ message: msg, key_id: keyId, curve });
         if (resp.code === 1000) {
-          setSignResult({ r: resp.data.r_hex, s: resp.data.s_hex, ms: resp.data.duration_ms });
+          setSignResult({ r: resp.data.r_hex, s: resp.data.s_hex, ms: resp.data.duration_ms ?? 0 });
           setRHex(resp.data.r_hex);
           setSHex(resp.data.s_hex);
         } else {
@@ -114,11 +141,11 @@ export function EccView() {
           message: msg,
           r_hex: rHex,
           s_hex: sHex,
-          key_id: keyInfo.key_id,
+          key_id: keyId,
           curve,
         });
         if (resp.code === 1000) {
-          setVerifyResult({ valid: !!resp.data.valid, ms: resp.data.duration_ms });
+          setVerifyResult({ valid: !!resp.data.valid, ms: resp.data.duration_ms ?? 0 });
         } else {
           setError(resp.message || "验签失败");
         }

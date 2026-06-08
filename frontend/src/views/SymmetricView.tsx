@@ -16,20 +16,23 @@ const ALGS = [
   { value: "rc6", label: "RC6" },
 ];
 const MODES = ["ECB", "CBC", "CTR", "GCM"].map((m) => ({ value: m, label: m }));
-const PADS = ["PKCS7", "ZeroPadding", "None"].map((p) => ({ value: p, label: p }));
+const PADS = [
+  { value: "PKCS7", label: "PKCS7" },
+  { value: "Zero", label: "ZeroPadding" },
+  { value: "None", label: "None" },
+];
+const DEFAULT_IV_12 = "000102030405060708090a0b";
+const DEFAULT_IV_16 = "000102030405060708090a0b0c0d0e0f";
 
 // AES allows 128/192/256, SM4 fixed 128, RC6 typically 128/256
 const KEY_SIZE_OPTIONS: Record<string, { value: string; label: string }[]> = {
   aes: [
-    { value: "128", label: "AES-128" },
-    { value: "192", label: "AES-192" },
-    { value: "256", label: "AES-256" },
+    { value: "16", label: "AES-128" },
+    { value: "24", label: "AES-192" },
+    { value: "32", label: "AES-256" },
   ],
-  sm4: [{ value: "128", label: "SM4-128" }],
-  rc6: [
-    { value: "128", label: "RC6-128" },
-    { value: "256", label: "RC6-256" },
-  ],
+  sm4: [{ value: "16", label: "SM4-128" }],
+  rc6: [{ value: "16", label: "RC6-128" }],
 };
 
 interface KeyEntry {
@@ -41,16 +44,59 @@ interface KeyEntry {
   status?: string;
 }
 
+function utf8ToBase64(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  bytes.forEach((b) => {
+    binary += String.fromCharCode(b);
+  });
+  return btoa(binary);
+}
+
+function base64ToUtf8(value: string): string {
+  try {
+    const binary = atob(value);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return value;
+  }
+}
+
+function base64ToHex(value: string): string {
+  try {
+    const binary = atob(value);
+    let hex = "";
+    for (let i = 0; i < binary.length; i++) {
+      hex += binary.charCodeAt(i).toString(16).padStart(2, "0");
+    }
+    return hex;
+  } catch {
+    return "";
+  }
+}
+
+function hexToBase64(value: string): string {
+  const clean = value.replace(/\s+/g, "");
+  const bytes = clean.match(/.{1,2}/g) || [];
+  let binary = "";
+  bytes.forEach((h) => {
+    binary += String.fromCharCode(parseInt(h, 16));
+  });
+  return btoa(binary);
+}
+
 export function SymmetricView() {
   const meta = ROUTE_TITLES.symmetric;
   const [mode, setMode] = useState("GCM");
   const [alg, setAlg] = useState("aes");
-  const [keySize, setKeySize] = useState("256");
+  const [keySize, setKeySize] = useState("32");
   const [pad, setPad] = useState("PKCS7");
   const [dir, setDir] = useState<"encrypt" | "decrypt">("encrypt");
   const [keys, setKeys] = useState<KeyEntry[]>([]);
   const [keyId, setKeyId] = useState<string>("");
-  const [iv, setIv] = useState("000102030405060708090a0b");
+  const [iv, setIv] = useState(DEFAULT_IV_12);
   const [aad, setAad] = useState("");
   const [text, setText] = useState("Hello, World!");
   const [loading, setLoading] = useState(false);
@@ -96,7 +142,20 @@ export function SymmetricView() {
     if (opts && !opts.find((o) => o.value === keySize)) {
       setKeySize(opts[0].value);
     }
-  }, [alg, keySize]);
+    if (alg === "rc6" && !["ECB", "CBC"].includes(mode)) {
+      setMode("ECB");
+    }
+    if (pad === "Zero" && dir === "decrypt") {
+      setPad("PKCS7");
+    }
+    const ivLen = iv.replace(/\s+/g, "").length;
+    if (["CBC", "CTR"].includes(mode) && ivLen !== 32) {
+      setIv(DEFAULT_IV_16);
+    }
+    if (mode === "GCM" && ivLen !== 24) {
+      setIv(DEFAULT_IV_12);
+    }
+  }, [alg, keySize, mode, pad, dir, iv]);
 
   // Filter keys by selected algorithm
   const algKeys = keys.filter((k) => (k.algorithm || "").toLowerCase() === alg);
@@ -119,78 +178,57 @@ export function SymmetricView() {
       setResult(null);
       if (dir === "encrypt") {
         const body: Record<string, any> = {
-          plaintext: text,
+          algorithm: alg,
+          plaintext_b64: utf8ToBase64(text),
           key_id: keyId,
           mode,
+          padding: pad,
         };
         if (mode !== "ECB" && mode !== "GCM" && iv) body.iv_hex = iv;
         if (mode === "GCM") {
           if (iv) body.iv_hex = iv;
-          if (aad) body.aad = aad;
+          if (aad) body.aad_b64 = aad;
         }
         const resp = await symmetricEncrypt(alg, body);
         if (resp.code === 1000) {
           const data = resp.data || {};
-          const hex: string = data.ciphertext_hex || "";
-          // Convert hex to Base64 for display
-          let b64 = "";
-          try {
-            const bytes = new Uint8Array(
-              (hex.match(/.{1,2}/g) || []).map((h) => parseInt(h, 16))
-            );
-            let bin = "";
-            for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-            b64 = typeof btoa !== "undefined" ? btoa(bin) : "";
-          } catch {
-            b64 = hex;
-          }
+          const b64: string = data.ciphertext_b64 || "";
+          const hex = base64ToHex(b64);
           setResult({
             b64,
             hex,
             ms: data.duration_ms ?? 0,
-            tagHex: data.tag_hex,
-            ivHex: data.iv_hex,
+            tagHex: mode === "GCM" && hex.length >= 32 ? hex.slice(-32) : undefined,
+            ivHex: iv,
           });
-          if (data.iv_hex) setIv(data.iv_hex);
         } else {
           setError(resp.message || "加密失败");
         }
       } else {
-        // decrypt: input field holds ciphertext (Base64). Try to convert to hex.
-        let cipherHex = text.trim();
-        // If the text is not pure hex, treat as Base64 and convert
-        if (!/^[0-9a-fA-F\s]+$/.test(cipherHex)) {
-          try {
-            const bin = typeof atob !== "undefined" ? atob(cipherHex) : "";
-            let h = "";
-            for (let i = 0; i < bin.length; i++) {
-              h += bin.charCodeAt(i).toString(16).padStart(2, "0");
-            }
-            cipherHex = h;
-          } catch {
-            /* keep as-is */
-          }
-        } else {
-          cipherHex = cipherHex.replace(/\s+/g, "");
-        }
+        const ciphertext = text.trim();
+        const ciphertext_b64 = /^[0-9a-fA-F\s]+$/.test(ciphertext)
+          ? hexToBase64(ciphertext)
+          : ciphertext;
         const body: Record<string, any> = {
-          ciphertext_hex: cipherHex,
+          algorithm: alg,
+          ciphertext_b64,
           key_id: keyId,
           mode,
+          padding: pad,
         };
         if (mode !== "ECB" && iv) body.iv_hex = iv;
         if (mode === "GCM") {
-          if (aad) body.aad = aad;
-          // tag_hex may be supplied via the AAD-adjacent flow; if user pasted a separate field we don't have here.
+          if (aad) body.aad_b64 = aad;
         }
         const resp = await symmetricDecrypt(alg, body);
         if (resp.code === 1000) {
           const data = resp.data || {};
+          const plaintextB64: string = data.plaintext_b64 || "";
           setResult({
             b64: "",
-            hex: cipherHex,
+            hex: base64ToHex(ciphertext_b64),
             ms: data.duration_ms ?? 0,
-            plaintext: data.plaintext,
+            plaintext: base64ToUtf8(plaintextB64),
           });
         } else {
           setError(resp.message || "解密失败");
@@ -210,7 +248,7 @@ export function SymmetricView() {
       const resp = await symmetricKeygen({
         algorithm: alg,
         key_size: Number(keySize),
-        label: `${alg.toUpperCase()}-${keySize} key`,
+        label: `${alg.toUpperCase()}-${Number(keySize) * 8} key`,
       });
       if (resp.code === 1000) {
         const data = resp.data || {};
@@ -251,11 +289,11 @@ export function SymmetricView() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-[var(--cl-text-secondary)]">模式</span>
-            <Select value={mode} onChange={setMode} options={MODES} />
+            <Select value={mode} onChange={setMode} options={alg === "rc6" ? MODES.filter((m) => ["ECB", "CBC"].includes(m.value)) : MODES} />
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-[var(--cl-text-secondary)]">填充</span>
-            <Select value={pad} onChange={setPad} options={PADS} />
+            <Select value={pad} onChange={setPad} options={dir === "decrypt" ? PADS.filter((p) => p.value !== "Zero") : PADS} />
           </div>
           <div className="ml-auto flex items-center bg-[var(--cl-bg-page)] rounded-md p-0.5">
             {(["encrypt", "decrypt"] as const).map((d) => (
