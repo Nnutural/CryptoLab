@@ -1,9 +1,13 @@
-import client from './client'
+import client, { type APIResponse } from "./client";
 
-export const hash = (algo: string, payload: unknown) =>
-  client.post(`/hash/${algo}`, payload)
+export async function computeHash(algo: string, data: string): Promise<APIResponse<any>> {
+  return client.post(`/hash/${algo}`, { data });
+}
 
-export const hmac = (algo: string, payload: unknown) =>
-  client.post(`/hash/hmac/${algo}`, payload)
+export async function computeHmac(algo: string, body: { key: string; message: string; algorithm: string }): Promise<APIResponse<any>> {
+  return client.post(`/hash/hmac/${algo}`, body);
+}
 
-export const pbkdf2 = (payload: unknown) => client.post('/hash/pbkdf2', payload)
+export async function computePbkdf2(body: { password: string; salt: string; iterations: number; key_len: number }): Promise<APIResponse<any>> {
+  return client.post("/hash/pbkdf2", body);
+}

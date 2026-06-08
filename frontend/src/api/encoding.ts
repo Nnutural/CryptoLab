@@ -1,7 +1,9 @@
-import client from './client'
+import client, { type APIResponse } from "./client";
 
-export const base64 = (op: 'encode' | 'decode', payload: unknown) =>
-  client.post(`/encoding/base64/${op}`, payload)
+export async function base64Encode(data: string): Promise<APIResponse<any>> {
+  return client.post("/encoding/base64/encode", { data });
+}
 
-export const utf8 = (op: 'encode' | 'decode', payload: unknown) =>
-  client.post(`/encoding/utf8/${op}`, payload)
+export async function base64Decode(encoded: string): Promise<APIResponse<any>> {
+  return client.post("/encoding/base64/decode", { encoded });
+}

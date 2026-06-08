@@ -1,7 +1,13 @@
-import client from './client'
+import client, { type APIResponse } from "./client";
 
-export const symmetricEncrypt = (algo: string, payload: unknown) =>
-  client.post(`/symmetric/${algo}/encrypt`, payload)
+export async function symmetricKeygen(body: { algorithm: string; key_size: number; label?: string }): Promise<APIResponse<any>> {
+  return client.post("/symmetric/keygen", body);
+}
 
-export const symmetricDecrypt = (algo: string, payload: unknown) =>
-  client.post(`/symmetric/${algo}/decrypt`, payload)
+export async function symmetricEncrypt(algo: string, body: any): Promise<APIResponse<any>> {
+  return client.post(`/symmetric/${algo}/encrypt`, body);
+}
+
+export async function symmetricDecrypt(algo: string, body: any): Promise<APIResponse<any>> {
+  return client.post(`/symmetric/${algo}/decrypt`, body);
+}

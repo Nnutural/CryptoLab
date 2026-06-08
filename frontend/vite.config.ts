@@ -1,27 +1,22 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import path from 'node:path'
+import { defineConfig } from "vite";
+import path from "path";
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
 
-// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src')
-    }
+      "@": path.resolve(__dirname, "./src"),
+    },
   },
   server: {
     port: 5173,
-    strictPort: true,
     proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true
-      }
-    }
+      "/api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+    },
   },
-  build: {
-    target: 'es2022',
-    sourcemap: true
-  }
-})
+});
