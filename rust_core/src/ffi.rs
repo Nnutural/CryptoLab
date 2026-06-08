@@ -12,13 +12,14 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyModule};
 
-use crate::error::CryptoResult;
+use crate::error::{CryptoError, CryptoResult};
 use num_bigint::BigUint;
 
 /// Register every exported binding on `m`.
 pub fn register(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     // ----- symmetric -----
     m.add_function(wrap_pyfunction!(aes_encrypt, m)?)?;
+    m.add_function(wrap_pyfunction!(aes_encrypt_with_trace, m)?)?;
     m.add_function(wrap_pyfunction!(aes_decrypt, m)?)?;
     m.add_function(wrap_pyfunction!(sm4_encrypt, m)?)?;
     m.add_function(wrap_pyfunction!(sm4_decrypt, m)?)?;
@@ -110,6 +111,28 @@ fn aes_encrypt<'py>(
 }
 
 /// AES decrypt — dispatches to ECB / CBC / CTR / GCM by `mode`.
+/// AES single-block ECB encrypt with a full per-round trace.
+#[pyfunction]
+fn aes_encrypt_with_trace(py: Python<'_>, plaintext: &[u8], key: &[u8]) -> PyResult<PyObject> {
+    if plaintext.len() != crate::symmetric::aes::BLOCK_SIZE {
+        return Err(CryptoError::InvalidInputLength(format!(
+            "verbose mode requires exactly 16 bytes plaintext, got {}",
+            plaintext.len()
+        ))
+        .into());
+    }
+
+    let mut block = [0u8; crate::symmetric::aes::BLOCK_SIZE];
+    block.copy_from_slice(plaintext);
+    let (ciphertext, trace) = crate::symmetric::aes::encrypt_block_with_trace(&block, key)?;
+    let trace_json = serde_json::to_string(&trace)
+        .map_err(|err| CryptoError::Internal(format!("trace serialize failed: {err}")))?;
+    let json = PyModule::import(py, "json")?;
+    let trace_dict = json.call_method1("loads", (trace_json,))?;
+
+    Ok((PyBytes::new(py, &ciphertext), trace_dict).into_py(py))
+}
+
 #[pyfunction]
 #[pyo3(signature = (ciphertext, key, mode, iv=None, aad=None, padding="pkcs7"))]
 fn aes_decrypt<'py>(

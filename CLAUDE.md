@@ -101,6 +101,7 @@ PowerShell is the primary local shell on this workspace.
 - SQL must go through SQLAlchemy parameterization; no string-concatenated SQL.
 - CORS production config must use explicit origins, never `"*"`.
 - Demo endpoints must keep unsafe-parameter warnings and access controls.
+- Verbose mode: AES-only, ECB-only, 16-byte block.
 
 ## Module Boundaries
 

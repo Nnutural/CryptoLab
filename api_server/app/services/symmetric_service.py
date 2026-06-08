@@ -83,6 +83,47 @@ async def encrypt(
     )
 
 
+async def aes_encrypt_with_trace_op(
+    db: Session,
+    user: AuthenticatedUser,
+    algo: str,
+    req: SymmetricEncryptRequest,
+) -> SymmetricEncryptResponse:
+    """AES-ECB single-block verbose encryption.
+
+    The trace contains plaintext-equivalent intermediate states, so this path
+    intentionally does not record metrics.
+    """
+    if algo != "aes" or req.algorithm != "aes":
+        raise CryptoAPIException(
+            StatusCode.ALGORITHM_UNSUPPORTED,
+            "verbose mode is only supported for AES",
+        )
+
+    key_bytes = key_service.fetch_and_decrypt(db, user, req.key_id, "symmetric")
+
+    try:
+        import cryptolab_core
+
+        plaintext_bytes = req.plaintext_bytes()
+        start_ns = time.perf_counter_ns()
+        ciphertext, trace = cryptolab_core.aes_encrypt_with_trace(plaintext_bytes, key_bytes)
+        duration_ns = time.perf_counter_ns() - start_ns
+        duration_ms = duration_ns / 1_000_000
+    except ValueError as exc:
+        raise CryptoAPIException(_status_for_encrypt_error(str(exc)), str(exc)) from exc
+    except Exception as exc:
+        raise CryptoAPIException(StatusCode.CRYPTO_LIB_ERROR) from exc
+
+    return SymmetricEncryptResponse(
+        ciphertext_b64=base64.b64encode(ciphertext).decode("ascii"),
+        algorithm=algo,
+        mode=req.mode,
+        duration_ms=duration_ms,
+        trace=trace,
+    )
+
+
 async def decrypt(
     db: Session,
     user: AuthenticatedUser,

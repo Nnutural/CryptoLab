@@ -60,6 +60,7 @@ class SymmetricEncryptRequest(_SymmetricBase):
     """Encrypt bytes carried as standard Base64."""
 
     plaintext_b64: str
+    verbose: bool = False
 
     def plaintext_bytes(self) -> bytes:
         return _decode_b64(self.plaintext_b64, "plaintext_b64")
@@ -77,11 +78,31 @@ class SymmetricDecryptRequest(_SymmetricBase):
         return _decode_b64(self.ciphertext_b64, "ciphertext_b64")
 
 
+class AesRoundTrace(BaseModel):
+    round_index: int
+    after_sub_bytes: str
+    after_shift_rows: str
+    after_mix_columns: str | None
+    after_add_round_key: str
+
+
+class AesTrace(BaseModel):
+    key_size_bits: int
+    total_rounds: int
+    plaintext_hex: str
+    round_keys_hex: list[str]
+    initial_add_round_key: str
+    rounds: list[AesRoundTrace]
+    ciphertext_hex: str
+    timings_ns: dict[str, int | list[int]]
+
+
 class SymmetricEncryptResponse(BaseModel):
     ciphertext_b64: str
     algorithm: str
     mode: str
     duration_ms: float = Field(..., ge=0)
+    trace: AesTrace | None = None
 
 
 class SymmetricDecryptResponse(BaseModel):

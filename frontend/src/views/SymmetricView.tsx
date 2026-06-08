@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Lock, Unlock, KeyRound, Dice5, Sparkles, ArrowLeftRight } from "lucide-react";
+import { BookOpen, Lock, Unlock, KeyRound, Dice5, Sparkles, ArrowLeftRight } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { CryptoCard } from "@/components/shared/CryptoCard";
 import { Field, TextInput, TextArea, Select, PrimaryButton, GhostButton, Tag } from "@/components/shared/Field";
@@ -7,8 +7,9 @@ import { HexViewer } from "@/components/shared/HexViewer";
 import { OperationTimer } from "@/components/shared/OperationTimer";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ROUTE_TITLES } from "@/components/nav";
-import { symmetricEncrypt, symmetricDecrypt, symmetricKeygen } from "@/api/symmetric";
+import { symmetricEncrypt, symmetricDecrypt, symmetricKeygen, type AesTrace } from "@/api/symmetric";
 import { listKeys } from "@/api/keys";
+import { AesTraceViewer } from "@/components/shared/AesTraceViewer";
 
 const ALGS = [
   { value: "aes", label: "AES" },
@@ -99,6 +100,7 @@ export function SymmetricView() {
   const [iv, setIv] = useState(DEFAULT_IV_12);
   const [aad, setAad] = useState("");
   const [text, setText] = useState("Hello, World!");
+  const [verbose, setVerbose] = useState(false);
   const [loading, setLoading] = useState(false);
   const [keygenLoading, setKeygenLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,9 +112,14 @@ export function SymmetricView() {
         tagHex?: string;
         ivHex?: string;
         plaintext?: string;
+        trace?: AesTrace | null;
       }
     | null
   >(null);
+
+  const verboseAvailable = alg === "aes" && mode === "ECB" && dir === "encrypt";
+  const plaintextByteLength = new TextEncoder().encode(text).length;
+  const verboseBlockReady = plaintextByteLength === 16;
 
   // Load key list on mount and after keygen
   const loadKeys = async () => {
@@ -135,6 +142,12 @@ export function SymmetricView() {
   useEffect(() => {
     loadKeys();
   }, []);
+
+  useEffect(() => {
+    if (!verboseAvailable) {
+      setVerbose(false);
+    }
+  }, [verboseAvailable]);
 
   // Reset keySize to a valid value when algorithm changes
   useEffect(() => {
@@ -177,12 +190,14 @@ export function SymmetricView() {
       setError(null);
       setResult(null);
       if (dir === "encrypt") {
+        const requestVerbose = verboseAvailable && verbose;
         const body: Record<string, any> = {
           algorithm: alg,
           plaintext_b64: utf8ToBase64(text),
           key_id: keyId,
           mode,
-          padding: pad,
+          padding: requestVerbose ? "None" : pad,
+          verbose: requestVerbose,
         };
         if (mode !== "ECB" && mode !== "GCM" && iv) body.iv_hex = iv;
         if (mode === "GCM") {
@@ -200,6 +215,7 @@ export function SymmetricView() {
             ms: data.duration_ms ?? 0,
             tagHex: mode === "GCM" && hex.length >= 32 ? hex.slice(-32) : undefined,
             ivHex: iv,
+            trace: data.trace ?? null,
           });
         } else {
           setError(resp.message || "加密失败");
@@ -374,15 +390,47 @@ export function SymmetricView() {
 
           <Field
             label={dir === "encrypt" ? "明文" : "密文 (Base64)"}
-            hint={dir === "encrypt" ? "提交时自动转 Base64" : undefined}
+            hint={
+              dir === "encrypt"
+                ? verbose
+                  ? `UTF-8 ${plaintextByteLength}/16 字节`
+                  : "提交时自动转 Base64"
+                : undefined
+            }
           >
             <TextArea
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={5}
-              placeholder={dir === "encrypt" ? "输入要加密的文本…" : "粘贴 Base64 密文…"}
+              placeholder={dir === "encrypt" ? (verbose ? "必须正好 16 字节" : "输入要加密的文本…") : "粘贴 Base64 密文…"}
             />
           </Field>
+
+          {verboseAvailable && (
+            <div className="mb-4 rounded-md border border-[var(--cl-border-light)] bg-[var(--cl-bg-page)]/55 px-3 py-2.5">
+              <label className="flex items-center justify-between gap-3 cursor-pointer">
+                <span className="inline-flex items-center gap-2 text-xs text-[var(--cl-text-regular)]">
+                  <BookOpen size={14} className="text-[var(--cl-primary)]" />
+                  教学模式 (Verbose)
+                </span>
+                <input
+                  type="checkbox"
+                  checked={verbose}
+                  onChange={(event) => setVerbose(event.target.checked)}
+                  className="h-4 w-4 accent-[var(--cl-primary)]"
+                />
+              </label>
+              {verbose && (
+                <div
+                  className={`mt-2 text-[11px] ${
+                    verboseBlockReady ? "text-[var(--cl-success)]" : "text-[var(--cl-warning)]"
+                  }`}
+                >
+                  AES verbose 仅支持 ECB 单分组,明文必须正好 16 字节。
+                </div>
+              )}
+            </div>
+          )}
 
           {error && (
             <div className="mb-3 px-3 py-2 rounded-md bg-[#FEF0F0] border border-[#FBC4C4] text-xs text-[#C45656] cl-shake">
@@ -439,8 +487,9 @@ export function SymmetricView() {
                 <Tag tone="success">运算成功</Tag>
                 <Tag tone="info">算法 {alg.toUpperCase()}-{mode}</Tag>
                 <Tag tone="neutral">填充 {pad}</Tag>
-                <Tag tone="neutral">IV {iv.length / 2} 字节</Tag>
+                <Tag tone="neutral">IV {mode === "ECB" ? "不使用" : `${iv.length / 2} 字节`}</Tag>
               </div>
+              {result.trace && <AesTraceViewer trace={result.trace} />}
             </div>
           ) : (
             <EmptyState

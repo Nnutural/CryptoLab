@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Path, Request
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import CryptoAPIException
 from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
 from app.db.session import get_db
 from app.middleware.auth import get_current_user
@@ -46,7 +47,11 @@ async def encrypt(
     db: Session = DB_DEP,
 ) -> APIResponse[SymmetricEncryptResponse]:
     """Encrypt plaintext with the chosen algorithm + mode + padding."""
-    result = await symmetric_service.encrypt(db, user, algo, req)
+    if req.verbose:
+        _validate_verbose_request(algo, req)
+        result = await symmetric_service.aes_encrypt_with_trace_op(db, user, algo, req)
+    else:
+        result = await symmetric_service.encrypt(db, user, algo, req)
     return _ok(request, result)
 
 
@@ -70,3 +75,22 @@ def _ok(request: Request, data: object) -> APIResponse:
         data=data,
         trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
     )
+
+
+def _validate_verbose_request(algo: str, req: SymmetricEncryptRequest) -> None:
+    if algo != "aes" or req.algorithm != "aes":
+        raise CryptoAPIException(
+            StatusCode.ALGORITHM_UNSUPPORTED,
+            "verbose mode is only supported for AES",
+        )
+    if req.mode != "ECB":
+        raise CryptoAPIException(StatusCode.PARAM_MISSING, "verbose mode requires ECB mode")
+    try:
+        plaintext = req.plaintext_bytes()
+    except ValueError as exc:
+        raise CryptoAPIException(StatusCode.ENCODING_ERROR, str(exc)) from exc
+    if len(plaintext) != 16:
+        raise CryptoAPIException(
+            StatusCode.PARAM_MISSING,
+            "verbose mode requires exactly 16 bytes plaintext",
+        )

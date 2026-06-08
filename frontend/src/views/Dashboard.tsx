@@ -58,6 +58,7 @@ function StatCard({
   unit,
   icon,
   trend,
+  hint,
   decimals = 0,
 }: {
   label: string;
@@ -65,6 +66,7 @@ function StatCard({
   unit?: string;
   icon: ReactNode;
   trend?: string;
+  hint?: ReactNode;
   decimals?: number;
 }) {
   const v = useCountUp(value);
@@ -86,6 +88,7 @@ function StatCard({
           {unit && <span className="text-sm text-[var(--cl-text-secondary)] ml-1">{unit}</span>}
         </div>
         <div className="text-xs text-[var(--cl-text-secondary)] mt-1.5">{label}</div>
+        {hint && <div className="mt-2 text-[11px] leading-relaxed text-[var(--cl-text-secondary)]">{hint}</div>}
       </div>
     </div>
   );
@@ -243,7 +246,26 @@ export function Dashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
         <StatCard label="Algorithms" value={15} icon={<Cpu size={18} />} trend="covered" />
-        <StatCard label="Stored keys" value={keyCount} icon={<KeyRound size={18} />} />
+        <StatCard
+          label="Stored keys"
+          value={keyCount}
+          icon={<KeyRound size={18} />}
+          hint={
+            keyCount === 0 ? (
+              <>
+                还没有密钥，去{" "}
+                <button
+                  type="button"
+                  onClick={() => handleNavigate("keys")}
+                  className="text-[var(--cl-primary)] hover:underline"
+                >
+                  密钥管理
+                </button>{" "}
+                生成第一个。
+              </>
+            ) : undefined
+          }
+        />
         <StatCard label="Recent operations" value={opCount} icon={<Activity size={18} />} />
         <StatCard label="Average latency" value={avgLatency} decimals={2} unit="ms" icon={<Clock3 size={18} />} />
       </div>

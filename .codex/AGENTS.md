@@ -227,6 +227,45 @@ async def encrypt(db, user, algo, req):
 - GCM IV 是 12 字节；CBC/CTR IV 是 16 字节。
 - `padding` 后端枚举是 `PKCS7 | Zero | X923 | None`，不是 `ZeroPadding`。
 - RC6 当前只支持 ECB/CBC。
+- Verbose mode 仅支持 AES + ECB + 单个 16 字节明文分组；trace 含明文等价中间态，不进入 audit log 或 metrics。
+
+### 5.2.1 特色三：Verbose Mode 数据流
+
+AES verbose 是教学演示路径，不是普通加密路径的增强开关。数据流如下：
+
+```text
+rust_core/src/symmetric/aes.rs
+  AesTrace / AesRoundTrace / AesTimings
+  encrypt_block_with_trace()
+  -> captures state after SubBytes, ShiftRows, MixColumns, AddRoundKey
+  -> keeps normal encrypt_block() unchanged
+
+rust_core/src/ffi.rs
+  aes_encrypt_with_trace()
+  -> validates plaintext.len() == 16
+  -> returns (ciphertext_bytes, json.loads(serde_json(trace)))
+
+api_server/app/schemas/symmetric.py
+  SymmetricEncryptRequest.verbose
+  AesTrace / AesRoundTrace response schema
+
+api_server/app/routers/symmetric.py
+  verbose=True
+  -> require algorithm == aes
+  -> require mode == ECB
+  -> require decoded plaintext length == 16
+
+api_server/app/services/symmetric_service.py
+  aes_encrypt_with_trace_op()
+  -> fetches user key
+  -> calls cryptolab_core.aes_encrypt_with_trace
+  -> intentionally skips metrics_service.record_nowait()
+
+frontend/src/views/SymmetricView.tsx
+  AES + ECB + encrypt
+  -> 教学模式 toggle
+  -> renders frontend/src/components/shared/AesTraceViewer.tsx
+```
 
 ### 5.3 Hash / HMAC / PBKDF2
 
