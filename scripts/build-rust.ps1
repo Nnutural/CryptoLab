@@ -8,8 +8,7 @@
 $ErrorActionPreference = "Stop"
 
 if (-not $env:CRYPTOLAB_ROOT) {
-    Write-Error "CRYPTOLAB_ROOT is not set. Dot-source scripts/env.ps1 first."
-    exit 1
+    . (Join-Path $PSScriptRoot "env.ps1")
 }
 
 $env:PYTHONUTF8 = "1"
