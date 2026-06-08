@@ -10,6 +10,7 @@ from functools import lru_cache
 from app.core.exceptions import CryptoAPIException
 from app.core.status_codes import StatusCode
 from app.schemas.benchmark import BenchmarkResult
+from app.services import metrics_service
 
 ONE_MIB = 1024 * 1024
 THROUGHPUT_PAYLOAD = bytes(i % 251 for i in range(ONE_MIB))
@@ -186,27 +187,27 @@ def _bench_rsa_encrypt(cryptolab_core: object) -> BenchmarkResult:
 
 
 def _bench_rsa_decrypt(cryptolab_core: object) -> BenchmarkResult:
-    n, _e, d, _p, _q, ciphertext, _signature = _rsa_fixture()
+    n, e, d, p, q, ciphertext, _signature = _rsa_fixture()
     return _measure_fixed(
         algorithm="rsa",
         operation="decrypt",
         data_size_bytes=len(PUBKEY_MESSAGE),
         warmup_iterations=1,
-        iterations=50,
-        fn=lambda: cryptolab_core.rsa_decrypt(ciphertext, n, d, "oaep"),
+        iterations=100,
+        fn=lambda: cryptolab_core.rsa_decrypt_oaep(ciphertext, n, d, p, q, e),
         report_ops=True,
     )
 
 
 def _bench_rsa_sign(cryptolab_core: object) -> BenchmarkResult:
-    n, _e, d, _p, _q, _ciphertext, _signature = _rsa_fixture()
+    n, e, d, p, q, _ciphertext, _signature = _rsa_fixture()
     return _measure_fixed(
         algorithm="rsa",
         operation="sign",
         data_size_bytes=len(PUBKEY_MESSAGE),
         warmup_iterations=1,
-        iterations=50,
-        fn=lambda: cryptolab_core.rsa_sign(PUBKEY_MESSAGE, n, d, "pss"),
+        iterations=100,
+        fn=lambda: cryptolab_core.rsa_sign_pss(PUBKEY_MESSAGE, n, d, p, q, e),
         report_ops=True,
     )
 
@@ -349,6 +350,14 @@ def _result(
         throughput = (data_size_bytes * iterations / ONE_MIB) / seconds
     ops = (1_000_000_000 / ns_per_op) if report_ops and ns_per_op > 0 else None
 
+    metrics_service.record_nowait(
+        algorithm,
+        operation,
+        data_size_bytes,
+        int(ns_per_op),
+        sampling_rate=1.0,
+    )
+
     return BenchmarkResult(
         algorithm=algorithm,
         operation=operation,
@@ -369,7 +378,7 @@ def _rsa_fixture() -> tuple[bytes, bytes, bytes, bytes, bytes, bytes, bytes]:
 
     n, e, d, p, q = cryptolab_core.rsa_generate_keypair(1024, 65537)
     ciphertext = cryptolab_core.rsa_encrypt_oaep(PUBKEY_MESSAGE, n, e)
-    signature = cryptolab_core.rsa_sign(PUBKEY_MESSAGE, n, d, "pss")
+    signature = cryptolab_core.rsa_sign_pss(PUBKEY_MESSAGE, n, d, p, q, e)
     return bytes(n), bytes(e), bytes(d), bytes(p), bytes(q), bytes(ciphertext), bytes(signature)
 
 

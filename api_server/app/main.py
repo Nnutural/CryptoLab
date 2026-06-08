@@ -32,6 +32,7 @@ from app.routers import (
     demos,
     encoding,
     keys,
+    metrics,
     pubkey,
     scenarios,
     symmetric,
@@ -94,6 +95,7 @@ def create_app() -> FastAPI:
     app.include_router(pubkey.router,      prefix=f"{api_prefix}/pubkey",    tags=["pubkey"])
     app.include_router(scenarios.router,   prefix=f"{api_prefix}/scenarios", tags=["scenarios"])
     app.include_router(keys.router,        prefix=f"{api_prefix}/keys",      tags=["keys"])
+    app.include_router(metrics.router,     prefix=f"{api_prefix}/metrics",   tags=["metrics"])
     app.include_router(audit.router,       prefix=f"{api_prefix}/audit",     tags=["audit"])
     app.include_router(demos.router,       prefix=f"{api_prefix}/demos",     tags=["demos"])
     app.include_router(benchmark.router,   prefix=f"{api_prefix}/benchmark", tags=["benchmark"])

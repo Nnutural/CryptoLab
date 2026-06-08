@@ -92,8 +92,8 @@ async def test_pbkdf2_benchmark_uses_10000_inner_iterations(
     [
         ("rsa_keygen", "keygen", 10),
         ("rsa_encrypt", "encrypt", 100),
-        ("rsa_decrypt", "decrypt", 50),
-        ("rsa_sign", "sign", 50),
+        ("rsa_decrypt", "decrypt", 100),
+        ("rsa_sign", "sign", 100),
         ("rsa_verify", "verify", 100),
         ("ecdsa_sign", "sign", 50),
         ("ecdsa_verify", "verify", 100),

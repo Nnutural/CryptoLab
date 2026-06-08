@@ -100,10 +100,11 @@ impl RsaKeyPair {
     fn private_op_crt(&self, c: &BigUint) -> BigUint {
         let m1 = c.modpow(&self.dp, &self.p);
         let m2 = c.modpow(&self.dq, &self.q);
-        let diff = if m1 >= m2 {
-            &m1 - &m2
+        let m2_mod_p = &m2 % &self.p;
+        let diff = if m1 >= m2_mod_p {
+            &m1 - &m2_mod_p
         } else {
-            &m1 + &self.p - &m2
+            &m1 + &self.p - &m2_mod_p
         };
         let h = (&self.qinv * diff) % &self.p;
         &m2 + &self.q * h
@@ -210,7 +211,19 @@ pub fn decrypt_oaep_crt(
     p: &[u8],
     q: &[u8],
 ) -> CryptoResult<Vec<u8>> {
-    let key = private_from_parts(n, d, p, q)?;
+    decrypt_oaep_crt_with_e(ciphertext, n, &[0x01, 0x00, 0x01], d, p, q)
+}
+
+/// RSA OAEP decrypt using CRT private parameters and the matching public exponent.
+pub fn decrypt_oaep_crt_with_e(
+    ciphertext: &[u8],
+    n: &[u8],
+    e: &[u8],
+    d: &[u8],
+    p: &[u8],
+    q: &[u8],
+) -> CryptoResult<Vec<u8>> {
+    let key = private_from_parts(n, e, d, p, q)?;
     let k = modulus_len(&key.n)?;
     if ciphertext.len() != k {
         return Err(CryptoError::InvalidInputLength(format!(
@@ -253,7 +266,19 @@ pub fn sign_pss_crt(
     p: &[u8],
     q: &[u8],
 ) -> CryptoResult<Vec<u8>> {
-    let key = private_from_parts(n, d, p, q)?;
+    sign_pss_crt_with_e(message, n, &[0x01, 0x00, 0x01], d, p, q)
+}
+
+/// RSA-PSS sign using CRT private parameters and the matching public exponent.
+pub fn sign_pss_crt_with_e(
+    message: &[u8],
+    n: &[u8],
+    e: &[u8],
+    d: &[u8],
+    p: &[u8],
+    q: &[u8],
+) -> CryptoResult<Vec<u8>> {
+    let key = private_from_parts(n, e, d, p, q)?;
     let k = modulus_len(&key.n)?;
     let em = pss_encode(message, key.n.bits().saturating_sub(1) as usize)?;
     let s = key.private_op_crt_blinded(&os2ip(&em))?;
@@ -296,24 +321,48 @@ pub fn verify(
     }
 }
 
-fn private_from_parts(n: &[u8], d: &[u8], p: &[u8], q: &[u8]) -> CryptoResult<RsaKeyPair> {
+fn private_from_parts(
+    n: &[u8],
+    e: &[u8],
+    d: &[u8],
+    p: &[u8],
+    q: &[u8],
+) -> CryptoResult<RsaKeyPair> {
     let n = BigUint::from_bytes_be(n);
+    let e = BigUint::from_bytes_be(e);
     let d = BigUint::from_bytes_be(d);
     let p = BigUint::from_bytes_be(p);
     let q = BigUint::from_bytes_be(q);
     let one = BigUint::one();
+    if e <= one || e.is_even() {
+        return Err(CryptoError::InvalidKey(
+            "RSA public exponent must be an odd integer > 1".to_string(),
+        ));
+    }
     if p.is_zero() || q.is_zero() || &p * &q != n {
         return Err(CryptoError::InvalidKey("RSA p*q != n".to_string()));
     }
-    let dp = &d % (&p - &one);
-    let dq = &d % (&q - &one);
+    let p_minus_one = &p - &one;
+    let q_minus_one = &q - &one;
+    if e.gcd(&p_minus_one) != one || e.gcd(&q_minus_one) != one {
+        return Err(CryptoError::InvalidKey(
+            "RSA public exponent is not coprime to p-1 or q-1".to_string(),
+        ));
+    }
+    if (&e * &d) % &p_minus_one != one || (&e * &d) % &q_minus_one != one {
+        return Err(CryptoError::InvalidKey(
+            "RSA public/private exponent mismatch".to_string(),
+        ));
+    }
+    let dp = &d % &p_minus_one;
+    let dq = &d % &q_minus_one;
     let qinv = CryptoBigInt(q.clone())
         .mod_inverse(&CryptoBigInt(p.clone()))
         .ok_or_else(|| CryptoError::InvalidKey("RSA q inverse missing".to_string()))?
         .0;
     Ok(RsaKeyPair {
         n,
-        e: BigUint::from(65537u32),
+        e,
         d,
         p,
         q,
@@ -637,5 +686,100 @@ mod tests {
             key.private_op_crt_blinded(&ciphertext).expect("blinded op"),
             key.private_op_crt(&ciphertext)
         );
+    }
+
+    #[test]
+    fn crt_recombination_handles_m1_less_than_m2() {
+        let p = BigUint::from(61u32);
+        let q = BigUint::from(53u32);
+        let n = &p * &q;
+        let e = BigUint::from(17u32);
+        let d = BigUint::from(2753u32);
+        let one = BigUint::one();
+        let key = RsaKeyPair {
+            n: n.clone(),
+            e,
+            d: d.clone(),
+            p: p.clone(),
+            q: q.clone(),
+            dp: &d % (&p - &one),
+            dq: &d % (&q - &one),
+            qinv: CryptoBigInt(q)
+                .mod_inverse(&CryptoBigInt(p))
+                .expect("q inverse")
+                .0,
+        };
+        let c = BigUint::from(6u32);
+        assert!(c.modpow(&key.dp, &key.p) < c.modpow(&key.dq, &key.q));
+        assert_eq!(key.private_op_crt(&c), c.modpow(&d, &n));
+    }
+
+    #[test]
+    fn crt_recombination_reduces_m2_mod_p_before_subtracting() {
+        let p = BigUint::from(53u32);
+        let q = BigUint::from(61u32);
+        let n = &p * &q;
+        let e = BigUint::from(17u32);
+        let d = BigUint::from(2753u32);
+        let one = BigUint::one();
+        let key = RsaKeyPair {
+            n: n.clone(),
+            e,
+            d: d.clone(),
+            p: p.clone(),
+            q: q.clone(),
+            dp: &d % (&p - &one),
+            dq: &d % (&q - &one),
+            qinv: CryptoBigInt(q)
+                .mod_inverse(&CryptoBigInt(p))
+                .expect("q inverse")
+                .0,
+        };
+        let c = BigUint::from(9u32);
+
+        assert!(c.modpow(&key.dq, &key.q) > c.modpow(&key.dp, &key.p) + &key.p);
+        assert_eq!(key.private_op_crt(&c), c.modpow(&d, &n));
+    }
+
+    #[test]
+    fn private_from_parts_preserves_public_exponent_for_blinding() {
+        let p = BigUint::from(61u32);
+        let q = BigUint::from(53u32);
+        let n = &p * &q;
+        let e = BigUint::from(17u32);
+        let d = BigUint::from(2753u32);
+        let key = private_from_parts(
+            &n.to_bytes_be(),
+            &e.to_bytes_be(),
+            &d.to_bytes_be(),
+            &p.to_bytes_be(),
+            &q.to_bytes_be(),
+        )
+        .expect("valid private key");
+
+        assert_eq!(key.e, e);
+        let plaintext = BigUint::from(123u32);
+        let ciphertext = plaintext.modpow(&key.e, &key.n);
+        assert_eq!(
+            key.private_op_crt_blinded(&ciphertext).expect("blinded op"),
+            plaintext
+        );
+    }
+
+    #[ignore = "RSA-1024 CRT stress test is intentionally slow"]
+    #[test]
+    fn rsa_crt_decrypt_sign_stress_1000() {
+        let (n, e, d, p, q) = keygen(1024, 65537).expect("keygen");
+        let message = b"crt stress message";
+        let ciphertext = encrypt(message, &n, &e, "oaep").expect("encrypt");
+        for _ in 0..1000 {
+            let plaintext =
+                decrypt_oaep_crt_with_e(&ciphertext, &n, &e, &d, &p, &q).expect("decrypt");
+            assert_eq!(plaintext, message);
+        }
+        for _ in 0..1000 {
+            let signature = sign_pss_crt_with_e(message, &n, &e, &d, &p, &q).expect("sign");
+            verify(message, &signature, &n, &e, "pss").expect("verify");
+        }
     }
 }

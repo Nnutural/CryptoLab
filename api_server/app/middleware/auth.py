@@ -41,6 +41,7 @@ PROTECTED_PREFIXES: tuple[str, ...] = (
     "/api/v1/pubkey/",
     "/api/v1/scenarios/",
     "/api/v1/audit/",
+    "/api/v1/metrics",
     "/api/v1/keys",
     "/api/v1/benchmark/",
     "/api/v1/auth/logout",

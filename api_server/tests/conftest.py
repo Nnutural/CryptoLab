@@ -13,7 +13,7 @@ from app.core.kek import reset_kek_cache
 from app.core.security import AuthenticatedUser
 from app.db.session import get_session_factory, reset_database
 from app.main import app
-from app.services import key_service
+from app.services import key_service, metrics_service
 
 importlib.import_module("app.models")
 
@@ -59,6 +59,7 @@ async def isolated_state() -> AsyncIterator[None]:
     cache = FakeRedisCache()
     app.state.cache = cache
     yield
+    await metrics_service.flush_pending()
     await cache.close()
 
 

@@ -19,7 +19,7 @@ from app.schemas.symmetric import (
     SymmetricEncryptRequest,
     SymmetricEncryptResponse,
 )
-from app.services import key_service
+from app.services import key_service, metrics_service
 
 
 async def keygen(
@@ -54,22 +54,26 @@ async def encrypt(
             "sm4": cryptolab_core.sm4_encrypt,
             "rc6": cryptolab_core.rc6_encrypt,
         }
-        start = time.perf_counter()
+        plaintext_bytes = req.plaintext_bytes()
+        start_ns = time.perf_counter_ns()
         ciphertext = functions[algo](
-            req.plaintext_bytes(),
+            plaintext_bytes,
             key_bytes,
             req.mode,
             req.iv_bytes(),
             req.aad_bytes(),
             req.padding,
         )
-        duration_ms = (time.perf_counter() - start) * 1000
+        duration_ns = time.perf_counter_ns() - start_ns
+        duration_ms = duration_ns / 1_000_000
     except KeyError as exc:
         raise CryptoAPIException(StatusCode.ALGORITHM_UNSUPPORTED) from exc
     except ValueError as exc:
         raise CryptoAPIException(_status_for_encrypt_error(str(exc)), str(exc)) from exc
     except Exception as exc:
         raise CryptoAPIException(StatusCode.CRYPTO_LIB_ERROR) from exc
+
+    metrics_service.record_nowait(algo, "encrypt", len(plaintext_bytes), duration_ns)
 
     return SymmetricEncryptResponse(
         ciphertext_b64=base64.b64encode(ciphertext).decode("ascii"),
@@ -102,22 +106,26 @@ async def decrypt(
             "sm4": cryptolab_core.sm4_decrypt,
             "rc6": cryptolab_core.rc6_decrypt,
         }
-        start = time.perf_counter()
+        ciphertext_bytes = req.ciphertext_bytes()
+        start_ns = time.perf_counter_ns()
         plaintext = functions[algo](
-            req.ciphertext_bytes(),
+            ciphertext_bytes,
             key_bytes,
             req.mode,
             req.iv_bytes(),
             req.aad_bytes(),
             req.padding,
         )
-        duration_ms = (time.perf_counter() - start) * 1000
+        duration_ns = time.perf_counter_ns() - start_ns
+        duration_ms = duration_ns / 1_000_000
     except KeyError as exc:
         raise CryptoAPIException(StatusCode.ALGORITHM_UNSUPPORTED) from exc
     except ValueError as exc:
         raise CryptoAPIException(_status_for_decrypt_error(str(exc)), str(exc)) from exc
     except Exception as exc:
         raise CryptoAPIException(StatusCode.CRYPTO_LIB_ERROR) from exc
+
+    metrics_service.record_nowait(algo, "decrypt", len(ciphertext_bytes), duration_ns)
 
     return SymmetricDecryptResponse(
         plaintext_b64=base64.b64encode(plaintext).decode("ascii"),

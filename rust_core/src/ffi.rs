@@ -401,6 +401,7 @@ fn rsa_decrypt<'py>(
 }
 
 #[pyfunction]
+#[pyo3(signature = (ciphertext, n, d, p, q, e=None))]
 fn rsa_decrypt_oaep<'py>(
     py: Python<'py>,
     ciphertext: &[u8],
@@ -408,11 +409,13 @@ fn rsa_decrypt_oaep<'py>(
     d: &[u8],
     p: &[u8],
     q: &[u8],
+    e: Option<&[u8]>,
 ) -> PyResult<&'py PyBytes> {
-    to_pybytes(
-        py,
-        crate::pubkey::rsa::decrypt_oaep_crt(ciphertext, n, d, p, q),
-    )
+    let result = match e {
+        Some(e) => crate::pubkey::rsa::decrypt_oaep_crt_with_e(ciphertext, n, e, d, p, q),
+        None => crate::pubkey::rsa::decrypt_oaep_crt(ciphertext, n, d, p, q),
+    };
+    to_pybytes(py, result)
 }
 
 #[pyfunction]
@@ -428,6 +431,7 @@ fn rsa_sign<'py>(
 }
 
 #[pyfunction]
+#[pyo3(signature = (message, n, d, p, q, e=None))]
 fn rsa_sign_pss<'py>(
     py: Python<'py>,
     message: &[u8],
@@ -435,8 +439,13 @@ fn rsa_sign_pss<'py>(
     d: &[u8],
     p: &[u8],
     q: &[u8],
+    e: Option<&[u8]>,
 ) -> PyResult<&'py PyBytes> {
-    to_pybytes(py, crate::pubkey::rsa::sign_pss_crt(message, n, d, p, q))
+    let result = match e {
+        Some(e) => crate::pubkey::rsa::sign_pss_crt_with_e(message, n, e, d, p, q),
+        None => crate::pubkey::rsa::sign_pss_crt(message, n, d, p, q),
+    };
+    to_pybytes(py, result)
 }
 
 #[pyfunction]

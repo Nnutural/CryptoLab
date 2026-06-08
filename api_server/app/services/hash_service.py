@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 
 from app.core.exceptions import CryptoAPIException
@@ -14,6 +15,7 @@ from app.schemas.hash import (
     Pbkdf2Request,
     Pbkdf2Response,
 )
+from app.services import metrics_service
 
 
 async def hash_(algo: str, req: HashRequest) -> HashResponse:
@@ -31,12 +33,16 @@ async def hash_(algo: str, req: HashRequest) -> HashResponse:
             "sha3_512": cryptolab_core.sha3_512_digest,
             "ripemd160": cryptolab_core.ripemd160_digest,
         }
-        digest = functions[algo](req.data.encode("utf-8"))
+        data = req.data.encode("utf-8")
+        start_ns = time.perf_counter_ns()
+        digest = functions[algo](data)
+        duration_ns = time.perf_counter_ns() - start_ns
     except KeyError as exc:
         raise CryptoAPIException(StatusCode.ALGORITHM_UNSUPPORTED) from exc
     except Exception as exc:
         raise CryptoAPIException(StatusCode.CRYPTO_LIB_ERROR) from exc
 
+    metrics_service.record_nowait(algo, "digest", len(data), duration_ns)
     return HashResponse(digest_hex=digest.hex(), algorithm=algo)
 
 
@@ -53,17 +59,20 @@ async def hmac(algo: str, req: HmacRequest) -> HmacResponse:
 
         key = req.key.encode("utf-8")
         message = req.message.encode("utf-8")
+        start_ns = time.perf_counter_ns()
         if algo == "sha1":
             mac = cryptolab_core.hmac_sha1(key, message)
         elif algo == "sha256":
             mac = cryptolab_core.hmac_sha256(key, message)
         else:
             raise CryptoAPIException(StatusCode.ALGORITHM_UNSUPPORTED)
+        duration_ns = time.perf_counter_ns() - start_ns
     except CryptoAPIException:
         raise
     except Exception as exc:
         raise CryptoAPIException(StatusCode.CRYPTO_LIB_ERROR) from exc
 
+    metrics_service.record_nowait("hmac", f"hmac_{algo}", len(message), duration_ns)
     return HmacResponse(mac_hex=mac.hex(), algorithm=algo)
 
 
@@ -72,12 +81,16 @@ async def pbkdf2(req: Pbkdf2Request) -> Pbkdf2Response:
     try:
         import cryptolab_core
 
+        password = req.password.encode("utf-8")
+        salt = req.salt.encode("utf-8")
+        start_ns = time.perf_counter_ns()
         derived = cryptolab_core.pbkdf2_hmac_sha256(
-            req.password.encode("utf-8"),
-            req.salt.encode("utf-8"),
+            password,
+            salt,
             req.iterations,
             req.key_len,
         )
+        duration_ns = time.perf_counter_ns() - start_ns
     except ValueError as exc:
         raise CryptoAPIException(StatusCode.PARAM_MISSING, str(exc)) from exc
     except Exception as exc:
@@ -89,6 +102,8 @@ async def pbkdf2(req: Pbkdf2Request) -> Pbkdf2Response:
     if len(req.salt.encode("utf-8")) < 8:
         salt_warning = "PBKDF2 salt shorter than 8 bytes is accepted only for test vectors"
         warning = f"{warning}; {salt_warning}" if warning else salt_warning
+
+    metrics_service.record_nowait("pbkdf2", "derive", len(password) + len(salt), duration_ns)
 
     return Pbkdf2Response(
         derived_key_hex=derived.hex(),

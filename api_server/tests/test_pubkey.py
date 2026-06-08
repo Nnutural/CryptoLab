@@ -81,6 +81,44 @@ async def test_rsa_pss_sign_verify_roundtrip(client: httpx.AsyncClient) -> None:
     assert verified.json()["data"]["valid"] is True
 
 
+async def test_rsa_crt_roundtrip_with_non_default_exponent(client: httpx.AsyncClient) -> None:
+    keygen = await client.post("/api/v1/pubkey/rsa/keygen", json={"bits": 1024, "e": 65539})
+    assert keygen.status_code == 200
+    key = keygen.json()["data"]
+
+    encrypted = await client.post(
+        "/api/v1/pubkey/rsa/encrypt",
+        json={"plaintext": "hello", "key_id": key["public_key_id"]},
+    )
+    assert encrypted.status_code == 200
+
+    decrypted = await client.post(
+        "/api/v1/pubkey/rsa/decrypt",
+        json={
+            "ciphertext_hex": encrypted.json()["data"]["ciphertext_hex"],
+            "key_id": key["private_key_id"],
+        },
+    )
+    assert decrypted.status_code == 200
+    assert decrypted.json()["data"]["plaintext"] == "hello"
+
+    signed = await client.post(
+        "/api/v1/pubkey/rsa/sign",
+        json={"message": "hello", "key_id": key["private_key_id"]},
+    )
+    assert signed.status_code == 200
+    verified = await client.post(
+        "/api/v1/pubkey/rsa/verify",
+        json={
+            "message": "hello",
+            "signature_hex": signed.json()["data"]["signature_hex"],
+            "key_id": key["public_key_id"],
+        },
+    )
+    assert verified.status_code == 200
+    assert verified.json()["data"]["valid"] is True
+
+
 async def test_tampered_oaep_ciphertext_returns_3002(client: httpx.AsyncClient) -> None:
     key = await _rsa_keygen(client)
     encrypted = await client.post(

@@ -56,3 +56,5 @@ Thumbs.db
 logs/
 pgdata/
 redisdata/
+api_server/cryptolab.db
+frontend/tsconfig.tsbuildinfo
