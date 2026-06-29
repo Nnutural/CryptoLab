@@ -1,0 +1,4 @@
+image,block_count,duplicate_block_ratio
+source RGB blocks,6912,0.9958043981481481
+AES-ECB ciphertext,6912,0.9958043981481481
+AES-CBC ciphertext,6912,0.0

@@ -1,0 +1,103 @@
+PS> rg -n "m\.add_function|#\[pyfunction\]" rust_core/src/ffi.rs
+9://!   2. add a `#[pyfunction]` wrapper here that forwards to the pure fn
+21:    m.add_function(wrap_pyfunction!(aes_encrypt, m)?)?;
+22:    m.add_function(wrap_pyfunction!(aes_encrypt_with_trace, m)?)?;
+23:    m.add_function(wrap_pyfunction!(aes_decrypt, m)?)?;
+24:    m.add_function(wrap_pyfunction!(sm4_encrypt, m)?)?;
+25:    m.add_function(wrap_pyfunction!(sm4_decrypt, m)?)?;
+26:    m.add_function(wrap_pyfunction!(rc6_encrypt, m)?)?;
+27:    m.add_function(wrap_pyfunction!(rc6_decrypt, m)?)?;
+30:    m.add_function(wrap_pyfunction!(sha1, m)?)?;
+31:    m.add_function(wrap_pyfunction!(sha1_digest, m)?)?;
+32:    m.add_function(wrap_pyfunction!(sha224, m)?)?;
+33:    m.add_function(wrap_pyfunction!(sha224_digest, m)?)?;
+34:    m.add_function(wrap_pyfunction!(sha256, m)?)?;
+35:    m.add_function(wrap_pyfunction!(sha256_digest, m)?)?;
+36:    m.add_function(wrap_pyfunction!(sha384, m)?)?;
+37:    m.add_function(wrap_pyfunction!(sha384_digest, m)?)?;
+38:    m.add_function(wrap_pyfunction!(sha512, m)?)?;
+39:    m.add_function(wrap_pyfunction!(sha512_digest, m)?)?;
+40:    m.add_function(wrap_pyfunction!(sha3_256, m)?)?;
+41:    m.add_function(wrap_pyfunction!(sha3_256_digest, m)?)?;
+42:    m.add_function(wrap_pyfunction!(sha3_512, m)?)?;
+43:    m.add_function(wrap_pyfunction!(sha3_512_digest, m)?)?;
+44:    m.add_function(wrap_pyfunction!(ripemd160, m)?)?;
+45:    m.add_function(wrap_pyfunction!(ripemd160_digest, m)?)?;
+46:    m.add_function(wrap_pyfunction!(hmac_sha1, m)?)?;
+47:    m.add_function(wrap_pyfunction!(hmac_sha256, m)?)?;
+48:    m.add_function(wrap_pyfunction!(pbkdf2_hmac_sha256, m)?)?;
+51:    m.add_function(wrap_pyfunction!(base64_encode, m)?)?;
+52:    m.add_function(wrap_pyfunction!(base64_decode, m)?)?;
+53:    m.add_function(wrap_pyfunction!(utf8_encode, m)?)?;
+54:    m.add_function(wrap_pyfunction!(utf8_decode, m)?)?;
+57:    m.add_function(wrap_pyfunction!(rsa_generate_keypair, m)?)?;
+58:    m.add_function(wrap_pyfunction!(rsa_encrypt_oaep, m)?)?;
+59:    m.add_function(wrap_pyfunction!(rsa_decrypt_oaep, m)?)?;
+60:    m.add_function(wrap_pyfunction!(rsa_sign_pss, m)?)?;
+61:    m.add_function(wrap_pyfunction!(rsa_verify_pss, m)?)?;
+62:    m.add_function(wrap_pyfunction!(ecc_generate_keypair, m)?)?;
+63:    m.add_function(wrap_pyfunction!(rsa_keygen, m)?)?;
+64:    m.add_function(wrap_pyfunction!(rsa_encrypt, m)?)?;
+65:    m.add_function(wrap_pyfunction!(rsa_decrypt, m)?)?;
+66:    m.add_function(wrap_pyfunction!(rsa_sign, m)?)?;
+67:    m.add_function(wrap_pyfunction!(rsa_verify, m)?)?;
+68:    m.add_function(wrap_pyfunction!(ecc_keygen, m)?)?;
+69:    m.add_function(wrap_pyfunction!(ecdsa_sign, m)?)?;
+70:    m.add_function(wrap_pyfunction!(ecdsa_verify, m)?)?;
+71:    m.add_function(wrap_pyfunction!(rsa_demo_unsafe_keygen, m)?)?;
+72:    m.add_function(wrap_pyfunction!(rsa_demo_unsafe_encrypt_raw, m)?)?;
+73:    m.add_function(wrap_pyfunction!(rsa_demo_cube_root, m)?)?;
+74:    m.add_function(wrap_pyfunction!(ecdsa_demo_sign_with_k, m)?)?;
+75:    m.add_function(wrap_pyfunction!(ecdsa_demo_recover_d_from_k_reuse, m)?)?;
+96:#[pyfunction]
+115:#[pyfunction]
+136:#[pyfunction]
+154:#[pyfunction]
+172:#[pyfunction]
+190:#[pyfunction]
+208:#[pyfunction]
+229:#[pyfunction]
+234:#[pyfunction]
+239:#[pyfunction]
+244:#[pyfunction]
+249:#[pyfunction]
+254:#[pyfunction]
+259:#[pyfunction]
+264:#[pyfunction]
+269:#[pyfunction]
+274:#[pyfunction]
+279:#[pyfunction]
+284:#[pyfunction]
+289:#[pyfunction]
+294:#[pyfunction]
+299:#[pyfunction]
+304:#[pyfunction]
+309:#[pyfunction]
+317:#[pyfunction]
+325:#[pyfunction]
+344:#[pyfunction]
+349:#[pyfunction]
+354:#[pyfunction]
+360:#[pyfunction]
+372:#[pyfunction]
+386:#[pyfunction]
+392:#[pyfunction]
+404:#[pyfunction]
+414:#[pyfunction]
+426:#[pyfunction]
+444:#[pyfunction]
+456:#[pyfunction]
+474:#[pyfunction]
+486:#[pyfunction]
+492:#[pyfunction]
+504:#[pyfunction]
+512:#[pyfunction]
+520:#[pyfunction]
+533:#[pyfunction]
+546:#[pyfunction]
+568:#[pyfunction]
+577:#[pyfunction]
+597:#[pyfunction]
+
+
+[exit=0]

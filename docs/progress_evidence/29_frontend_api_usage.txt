@@ -1,0 +1,38 @@
+PS> @"
+from pathlib import Path
+import re
+for p in sorted(Path("frontend/src/views").glob("*.tsx")):
+    text=p.read_text(encoding="utf-8", errors="ignore")
+    imports=[line for line in text.splitlines() if "../api" in line or "from \"../api" in line]
+    calls=sorted(set(re.findall(r"\b([a-zA-Z][A-Za-z0-9_]*(?:Api|Key|Hash|Encrypt|Decrypt|Sign|Verify|Login|Register|Logs|Metrics|Benchmark)[A-Za-z0-9_]*)\(", text)))
+    print(f"==== {p.name} ====")
+    for line in imports: print(line)
+    print("calls:", ", ".join(calls))
+"@ | python -
+==== AuditView.tsx ====
+calls: fetchLogs, getAuditLogs, setLogs
+==== BenchmarkView.tsx ====
+calls: runBenchmark
+==== Dashboard.tsx ====
+calls: getAuditLogs, getMetrics, listKeys, seriesKey, setKeyCount, setMetrics
+==== DemosView.tsx ====
+calls: setKeyHex
+==== EccView.tsx ====
+calls: eccKeygen, ecdsaSign, ecdsaVerify, getKeyPublic, getKeyType, listKeys, loadKeys, setKeyError, setKeyInfo, setSignResult, setVerifyResult
+==== EncodingView.tsx ====
+calls: 
+==== HashView.tsx ====
+calls: computeHash
+==== HmacPbkdf2View.tsx ====
+calls: setKey, setKeyLen
+==== KeysView.tsx ====
+calls: deleteKey, getKeyPublic, listKeys, loadKeys, mapKey, setKeys
+==== RsaView.tsx ====
+calls: getKeyPublic, getKeyType, listKeys, loadKeys, rsaDecrypt, rsaEncrypt, rsaKeygen, rsaSign, rsaVerify, setHasKey, setKeyError, setKeyInfo, setSignResult, setVerifyResult
+==== ScenariosView.tsx ====
+calls: findKey, listKeys, loadScenarioKeys, setKeyIds
+==== SymmetricView.tsx ====
+calls: listKeys, loadKeys, setKeyId, setKeySize, setKeygenLoading, setKeys, symmetricDecrypt, symmetricEncrypt, symmetricKeygen
+
+
+[exit=0]

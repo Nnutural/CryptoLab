@@ -1,0 +1,184 @@
+PS> rg -n "jwt|Bearer|rate_limit|operation_logs|OperationLog|status_code|ConstantTimeEq|compare_digest|KEK|master_key|trace_id|Trace" api_server/app rust_core/src -g "*.py" -g "*.rs"
+api_server/app\db\base.py:16:    """Adds `created_at` (and only `created_at`) — operation_logs is append-only."""
+api_server/app\core\context.py:9:_trace_id: ContextVar[str] = ContextVar("trace_id", default=DEFAULT_TRACE_ID)
+api_server/app\core\context.py:12:def set_trace_id(trace_id: str) -> None:
+api_server/app\core\context.py:14:    _trace_id.set(trace_id)
+api_server/app\core\context.py:17:def get_trace_id() -> str:
+api_server/app\core\context.py:19:    return _trace_id.get()
+api_server/app\core\config.py:31:    jwt_secret: str = Field(
+api_server/app\core\config.py:36:    jwt_algorithm: Literal["HS256"] = "HS256"
+api_server/app\core\config.py:37:    jwt_access_ttl_seconds: int = 1800
+api_server/app\core\config.py:40:    # KEK (Key Encryption Key) for the at-rest key store. Hex-encoded 32 bytes.
+api_server/app\core\config.py:41:    master_key_hex: str = Field(
+api_server/app\core\config.py:43:        description="AES-256 KEK used to wrap user key material before DB write.",
+api_server/app\core\config.py:55:    rate_limit_window_seconds: int = 60
+api_server/app\core\config.py:56:    rate_limit_per_minute: int = 60
+api_server/app\core\config.py:57:    login_rate_limit_per_minute: int = 5
+rust_core/src\traits.rs:34:    fn encrypt_with_trace(&self, _block: &mut [u8]) -> CryptoResult<EncryptionTrace> {
+rust_core/src\traits.rs:43:pub struct EncryptionTrace {
+api_server/app\core\kek.py:1:"""KEK derivation (HKDF-SHA256) and envelope encryption for key_store rows.
+api_server/app\core\kek.py:4:library is used.  The derived KEK is cached at module level so the
+api_server/app\core\kek.py:14:_KEK_CACHE: bytes | None = None
+api_server/app\core\kek.py:47:def derive_kek(master_key: bytes) -> bytes:
+api_server/app\core\kek.py:48:    """Derive a 32-byte KEK from the master key using HKDF-SHA256."""
+api_server/app\core\kek.py:49:    return hkdf_sha256(master_key, HKDF_SALT, HKDF_INFO, HKDF_LEN)
+api_server/app\core\kek.py:53:    """Return the cached KEK, deriving it on first call."""
+api_server/app\core\kek.py:54:    global _KEK_CACHE
+api_server/app\core\kek.py:55:    if _KEK_CACHE is not None:
+api_server/app\core\kek.py:56:        return _KEK_CACHE
+api_server/app\core\kek.py:61:    raw = bytes.fromhex(settings.master_key_hex)
+api_server/app\core\kek.py:64:    _KEK_CACHE = derive_kek(raw)
+api_server/app\core\kek.py:65:    return _KEK_CACHE
+api_server/app\core\kek.py:69:    """Clear the cached KEK — used by tests that switch master keys."""
+api_server/app\core\kek.py:70:    global _KEK_CACHE
+api_server/app\core\kek.py:71:    _KEK_CACHE = None
+api_server/app\core\kek.py:75:    """AES-256-GCM encrypt *plaintext* under the KEK with AAD = key_id UUID bytes.
+api_server/app\core\security.py:11:import jwt
+api_server/app\core\security.py:34:    expires_at = now + timedelta(seconds=settings.jwt_access_ttl_seconds)
+api_server/app\core\security.py:46:    token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+api_server/app\core\security.py:53:    return jwt.decode(
+api_server/app\core\security.py:55:        settings.jwt_secret,
+api_server/app\core\security.py:56:        algorithms=[settings.jwt_algorithm],
+api_server/app\core\security.py:78:    return hmac.compare_digest(calculated, expected_hash)
+api_server/app\core\security.py:92:        "jwt_secret",
+api_server/app\core\security.py:93:        "master_key",
+api_server/app\core\security.py:94:        "master_key_hex",
+api_server/app\core\exceptions.py:16:from app.core.status_codes import DEFAULT_MESSAGES, HTTP_FOR_STATUS, StatusCode
+api_server/app\core\exceptions.py:74:    trace_id = getattr(request.state, "trace_id", None) or "00000000-0000-0000-0000-000000000000"
+api_server/app\core\exceptions.py:75:    body = APIResponse(code=code, message=message, data=data, trace_id=trace_id).model_dump(
+api_server/app\core\exceptions.py:78:    return JSONResponse(status_code=http_status or HTTP_FOR_STATUS.get(code, 500), content=body)
+api_server/app\core\logging.py:3:Every module gets its logger via `get_logger(__name__)` so trace_id, user_id,
+api_server/app\main.py:7:        CORS → TraceID → RateLimit → JWT → Audit (response side)
+api_server/app\main.py:26:from app.middleware.rate_limit import RateLimitMiddleware
+api_server/app\main.py:27:from app.middleware.trace import TraceIDMiddleware
+api_server/app\main.py:78:        allow_headers=["Authorization", "Content-Type", "X-Trace-Id"],
+api_server/app\main.py:85:    app.add_middleware(TraceIDMiddleware)
+rust_core/src\symmetric\aes.rs:8:use crate::traits::{EncryptionTrace, RoundState, SymmetricCipher};
+rust_core/src\symmetric\aes.rs:20:pub struct AesTrace {
+rust_core/src\symmetric\aes.rs:32:    pub rounds: Vec<AesRoundTrace>,
+rust_core/src\symmetric\aes.rs:41:pub struct AesRoundTrace {
+rust_core/src\symmetric\aes.rs:233:    fn encrypt_with_trace(&self, block: &mut [u8]) -> CryptoResult<EncryptionTrace> {
+rust_core/src\symmetric\aes.rs:235:        Ok(EncryptionTrace {
+rust_core/src\symmetric\aes.rs:271:) -> CryptoResult<(Vec<u8>, AesTrace)> {
+rust_core/src\symmetric\aes.rs:303:        rounds.push(AesRoundTrace {
+rust_core/src\symmetric\aes.rs:313:    let trace = AesTrace {
+api_server/app\services\audit_service.py:17:from app.core.status_codes import StatusCode
+api_server/app\services\audit_service.py:19:from app.models.operation_log import OperationLog
+api_server/app\services\audit_service.py:26:    """Immutable data needed for one operation_logs INSERT."""
+api_server/app\services\audit_service.py:28:    trace_id: str
+api_server/app\services\audit_service.py:35:    status_code: int
+api_server/app\services\audit_service.py:47:                OperationLog(
+api_server/app\services\audit_service.py:48:                    trace_id=record.trace_id,
+api_server/app\services\audit_service.py:55:                    status_code=record.status_code,
+api_server/app\services\audit_service.py:80:) -> list[OperationLog]:
+api_server/app\services\audit_service.py:83:        statement: Select[tuple[OperationLog]] = select(OperationLog)
+api_server/app\services\audit_service.py:85:            statement = statement.where(OperationLog.user_id == user.id)
+api_server/app\services\audit_service.py:87:            statement = statement.where(OperationLog.user_id == requested_user_id)
+api_server/app\services\audit_service.py:89:            statement = statement.where(OperationLog.algorithm == algorithm)
+api_server/app\services\audit_service.py:91:            statement = statement.where(OperationLog.created_at >= since)
+api_server/app\services\audit_service.py:93:            statement = statement.where(OperationLog.created_at <= until)
+api_server/app\services\audit_service.py:94:        statement = statement.order_by(OperationLog.created_at.desc()).offset(offset).limit(limit)
+api_server/app\services\audit_service.py:111:def row_to_item(row: OperationLog) -> dict[str, Any]:
+api_server/app\services\audit_service.py:112:    """Serialize an OperationLog row for the API schema."""
+api_server/app\services\audit_service.py:115:        "trace_id": row.trace_id,
+api_server/app\services\audit_service.py:122:        "status_code": row.status_code,
+api_server/app\services\demos_service.py:13:from app.core.context import get_trace_id
+api_server/app\services\demos_service.py:16:from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
+api_server/app\services\demos_service.py:47:        trace_id=get_trace_id(),
+api_server/app\services\demos_service.py:128:        r_equal = hmac.compare_digest(r1, r2)
+api_server/app\services\demos_service.py:139:        recovery_matches = hmac.compare_digest(_left_pad(d, SECP160R1_ORDER_LEN), recovered_d)
+api_server/app\services\demos_service.py:228:        recovery_matches_original=hmac.compare_digest(recovered_plaintext, req.message),
+api_server/app\services\benchmark_service.py:11:from app.core.status_codes import StatusCode
+rust_core/src\hash\hmac.rs:3:use subtle::ConstantTimeEq;
+api_server/app\services\encoding_service.py:6:from app.core.status_codes import StatusCode
+rust_core/src\pubkey\ecdsa.rs:8:use subtle::ConstantTimeEq;
+rust_core/src\modes\mod.rs:95:                    valid &= (!in_padding) | subtle::ConstantTimeEq::ct_eq(&b, &expected);
+rust_core/src\modes\mod.rs:114:                    valid &= (!in_padding) | subtle::ConstantTimeEq::ct_eq(&b, &0u8);
+api_server/app\services\key_service.py:16:from app.core.status_codes import StatusCode
+api_server/app\services\key_service.py:122:    """Ownership-check then KEK-decrypt the key material. Returns plaintext bytes."""
+rust_core/src\pubkey\rsa.rs:12:use subtle::ConstantTimeEq;
+api_server/app\services\hash_service.py:9:from app.core.status_codes import StatusCode
+rust_core/src\modes\gcm.rs:10:use subtle::ConstantTimeEq;
+api_server/app\models\key_store.py:3:Stored material is always KEK-wrapped (AES-256-GCM). The IV and auth_tag
+api_server/app\middleware\auth.py:8:import jwt
+api_server/app\middleware\auth.py:17:from app.core.status_codes import DEFAULT_MESSAGES, HTTP_FOR_STATUS, StatusCode
+api_server/app\middleware\auth.py:74:        except jwt.ExpiredSignatureError:
+api_server/app\middleware\auth.py:76:        except jwt.InvalidTokenError:
+api_server/app\middleware\auth.py:83:        if await cache.get(f"jwt_blacklist:{jti}") is not None:
+api_server/app\middleware\auth.py:110:    trace_id = getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000")
+api_server/app\middleware\auth.py:115:        trace_id=trace_id,
+api_server/app\middleware\auth.py:117:    return JSONResponse(status_code=HTTP_FOR_STATUS[code], content=body)
+api_server/app\services\pubkey_service.py:11:from app.core.status_codes import StatusCode
+api_server/app\middleware\rate_limit.py:12:from app.core.status_codes import DEFAULT_MESSAGES, HTTP_FOR_STATUS, StatusCode
+api_server/app\middleware\rate_limit.py:26:            settings.login_rate_limit_per_minute
+api_server/app\middleware\rate_limit.py:28:            else settings.rate_limit_per_minute
+api_server/app\middleware\rate_limit.py:30:        cache_key = f"rate_limit:{_client_ip(request)}:{_path_prefix(path)}"
+api_server/app\middleware\rate_limit.py:33:            settings.rate_limit_window_seconds,
+api_server/app\middleware\rate_limit.py:37:            trace_id = getattr(
+api_server/app\middleware\rate_limit.py:39:                "trace_id",
+api_server/app\middleware\rate_limit.py:46:                trace_id=trace_id,
+api_server/app\middleware\rate_limit.py:49:                status_code=HTTP_FOR_STATUS[StatusCode.RATE_LIMIT_EXCEEDED],
+api_server/app\routers\benchmark.py:7:from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
+api_server/app\routers\benchmark.py:28:        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
+api_server/app\models\operation_log.py:1:"""`operation_logs` table — see design doc §4.3 Table 3.
+api_server/app\models\operation_log.py:20:class OperationLog(Base, TimestampMixin):
+api_server/app\models\operation_log.py:21:    __tablename__ = "operation_logs"
+api_server/app\models\operation_log.py:24:    trace_id: Mapped[str] = mapped_column(String(36), index=True, nullable=False)
+api_server/app\models\operation_log.py:33:    status_code: Mapped[int] = mapped_column(Integer, nullable=False)
+api_server/app\middleware\trace.py:11:from app.core.context import set_trace_id
+api_server/app\middleware\trace.py:14:class TraceIDMiddleware(BaseHTTPMiddleware):
+api_server/app\middleware\trace.py:15:    """Honor an incoming `X-Trace-Id` header, or mint a fresh one.
+api_server/app\middleware\trace.py:17:    Stashes the value on `request.state.trace_id` for downstream middleware
+api_server/app\middleware\trace.py:22:        trace_id = request.headers.get("X-Trace-Id") or str(uuid4())
+api_server/app\middleware\trace.py:23:        request.state.trace_id = trace_id
+api_server/app\middleware\trace.py:24:        set_trace_id(trace_id)
+api_server/app\middleware\trace.py:26:        response.headers["X-Trace-Id"] = trace_id
+api_server/app\services\metrics_service.py:17:from app.core.status_codes import StatusCode
+api_server/app\middleware\audit.py:46:                        trace_id=getattr(
+api_server/app\middleware\audit.py:48:                            "trace_id",
+api_server/app\middleware\audit.py:57:                        status_code=response.status_code,
+api_server/app\middleware\audit.py:71:            status_code=response.status_code,
+api_server/app\routers\audit.py:10:from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
+api_server/app\routers\audit.py:13:from app.schemas.audit import OperationLogItem
+api_server/app\routers\audit.py:28:@router.get("/logs", response_model=APIResponse[list[OperationLogItem]])
+api_server/app\routers\audit.py:55:        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
+api_server/app\services\symmetric_service.py:14:from app.core.status_codes import StatusCode
+api_server/app\services\__init__.py:3:Routers MUST NOT import from `app.models` directly. All persistence, KEK
+api_server/app\models\user.py:15:    from app.models.operation_log import OperationLog
+api_server/app\models\user.py:29:    logs: Mapped[list[OperationLog]] = relationship(back_populates="user")
+api_server/app\services\scenario_service.py:16:from app.core.status_codes import StatusCode
+api_server/app\services\scenario_service.py:182:        digest_ok = hmac.compare_digest(digest.hex(), expected_digest_hex)
+api_server/app\routers\hash.py:7:from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
+api_server/app\routers\hash.py:62:        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
+api_server/app\models\__init__.py:8:from app.models.operation_log import OperationLog
+api_server/app\models\__init__.py:11:__all__ = ["User", "KeyStore", "OperationLog", "AlgorithmMetric"]
+api_server/app\services\user_service.py:20:from app.core.status_codes import StatusCode
+api_server/app\services\user_service.py:90:        await cache.setex(f"jwt_blacklist:{user.jti}", ttl, "1")
+api_server/app\routers\auth.py:8:from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
+api_server/app\routers\auth.py:71:        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
+api_server/app\schemas\auth.py:22:    token_type: str = "Bearer"
+api_server/app\schemas\common.py:18:    code: int = Field(..., description="Business status code (see status_codes.StatusCode)")
+api_server/app\schemas\common.py:21:    trace_id: str = Field(..., description="UUID propagated through middleware → logs → DB")
+api_server/app\schemas\audit.py:11:class OperationLogItem(BaseModel):
+api_server/app\schemas\audit.py:13:    trace_id: UUID
+api_server/app\schemas\audit.py:20:    status_code: int
+api_server/app\routers\keys.py:10:from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
+api_server/app\routers\keys.py:77:        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
+api_server/app\routers\metrics.py:10:from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
+api_server/app\routers\metrics.py:50:        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
+api_server/app\routers\pubkey.py:8:from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
+api_server/app\routers\pubkey.py:130:        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
+api_server/app\routers\encoding.py:8:from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
+api_server/app\routers\encoding.py:38:        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
+api_server/app\routers\encoding.py:65:        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
+api_server/app\routers\scenarios.py:8:from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
+api_server/app\routers\scenarios.py:55:        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
+api_server/app\schemas\symmetric.py:81:class AesRoundTrace(BaseModel):
+api_server/app\schemas\symmetric.py:89:class AesTrace(BaseModel):
+api_server/app\schemas\symmetric.py:95:    rounds: list[AesRoundTrace]
+api_server/app\schemas\symmetric.py:105:    trace: AesTrace | None = None
+api_server/app\routers\symmetric.py:9:from app.core.status_codes import DEFAULT_MESSAGES, StatusCode
+api_server/app\routers\symmetric.py:76:        trace_id=getattr(request.state, "trace_id", "00000000-0000-0000-0000-000000000000"),
+
+
+[exit=0]

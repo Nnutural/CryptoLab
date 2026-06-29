@@ -1,0 +1,26 @@
+PS> @"
+from pathlib import Path
+import ast
+for p in sorted(Path("api_server/app/schemas").glob("*.py")):
+    if p.name=="__init__.py": continue
+    tree=ast.parse(p.read_text(encoding="utf-8"))
+    classes=[]
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef):
+            fields=[]
+            for item in node.body:
+                if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+                    fields.append(item.target.id)
+            classes.append((node.name,fields))
+    print(f"==== {p} ====")
+    for name,fields in classes:
+        print(f"{name}: { .join(fields)}")
+"@ | python -
+Invoke-Expression: 
+Line |
+   7 |    try { Invoke-Expression $cmd 2>&1 | Out-String | Add-Content -Encod …
+     |                            ~~~~
+     | Cannot convert 'System.Object[]' to the type 'System.String' required by parameter 'Command'. Specified method is not supported.
+
+
+[exception]

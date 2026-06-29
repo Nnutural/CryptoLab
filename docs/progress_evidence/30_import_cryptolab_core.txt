@@ -1,0 +1,12 @@
+PS> .\.venv\Scripts\python.exe - <<PY
+import cryptolab_core
+public = [x for x in dir(cryptolab_core) if not x.startswith('_')]
+print(cryptolab_core.__name__)
+print(len(public))
+print(','.join(public[:20]))
+PY
+cryptolab_core
+49
+aes_decrypt,aes_encrypt,base64_decode,base64_encode,cryptolab_core,ecc_generate_keypair,ecc_keygen,ecdsa_demo_recover_d_from_k_reuse,ecdsa_demo_sign_with_k,ecdsa_sign,ecdsa_verify,hmac_sha1,hmac_sha256,pbkdf2_hmac_sha256,rc6_decrypt,rc6_encrypt,ripemd160,ripemd160_digest,rsa_decrypt,rsa_decrypt_oaep
+
+[exit=0]

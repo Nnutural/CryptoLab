@@ -58,7 +58,7 @@ PowerShell is the primary local shell on this workspace.
 | API tests | `pytest api_server/tests` |
 | API lint/types | `ruff check api_server; mypy api_server/app` |
 | Frontend dev server | `cd frontend; npm run dev` |
-| Frontend build/typecheck | `cd frontend; npm run build` or `npx tsc --noEmit` |
+| Frontend test/build/typecheck | `cd frontend; npm test`, `npm run build`, or `npx tsc --noEmit` |
 | All tests | `powershell -ExecutionPolicy Bypass -File .\scripts\test-all.ps1` |
 | Benchmark | `powershell -ExecutionPolicy Bypass -File .\scripts\bench.ps1` |
 | Docker stack | `docker compose -f deploy/docker-compose.yml up -d` |
@@ -84,10 +84,11 @@ PowerShell is the primary local shell on this workspace.
 
 - Implemented Rust primitives: AES, SM4, RC6, ECB/CBC/CTR/GCM, SHA1/SHA2/SHA3, RIPEMD-160, HMAC, PBKDF2, Base64, UTF-8, RSA-1024 OAEP/PSS, ECC secp160r1, ECDSA, demo helpers.
 - Remaining Rust `todo!()`: none in algorithm modules.
-- API routers present: `auth`, `symmetric`, `hash`, `encoding`, `pubkey`, `scenarios`, `keys`, `audit`, `demos`, `benchmark`.
+- API routers present: `auth`, `symmetric`, `hash`, `encoding`, `pubkey`, `scenarios`, `keys`, `audit`, `demos`, `benchmark`, `metrics`.
 - Frontend views present: Dashboard, Symmetric, Hash, HMAC/PBKDF2, Encoding, RSA, ECC, Keys, Audit, Benchmark, Demos, Scenarios.
 - API contract note: frontend is adapted to current backend DTOs; do not rename backend fields casually.
-- Benchmark note: backend benchmark service currently supports SHA-256 only.
+- Benchmark service supports in-process probes for `aes`, `aes_ecb`, `aes_gcm`, `sm4`, `sm4_ecb`, `rc6`, `rc6_ecb`, `sha1`, `sha256`, `sha512`, `sha3_256`, `ripemd160`, `hmac`, `hmac_sha256`, `pbkdf2`, `rsa_keygen`, `rsa_encrypt`, `rsa_decrypt`, `rsa_sign`, `rsa_verify`, `ecc_keygen`, `ecdsa_keygen`, `ecdsa_sign`, and `ecdsa_verify`. It is still a small service-side measurement path, not a full benchmark suite for every mode/padding combination.
+- Latest progress evidence: Rust tests `53 passed; 0 failed; 3 ignored`; API tests `254 passed, 1 deselected`; frontend build passes with only a Vite chunk-size warning. Docker compose config passed, but Docker build evidence is still missing when the daemon is not running.
 
 ## Security Red Lines
 

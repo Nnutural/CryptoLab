@@ -1,0 +1,26 @@
+iterations,repeat,duration_ms,derived_key_prefix,note
+1000,1,1.263,17438a5c4898a6da,real cryptolab_core.pbkdf2_hmac_sha256 call
+1000,2,2.296,17438a5c4898a6da,real cryptolab_core.pbkdf2_hmac_sha256 call
+1000,3,1.3377,17438a5c4898a6da,real cryptolab_core.pbkdf2_hmac_sha256 call
+1000,4,1.2881,17438a5c4898a6da,real cryptolab_core.pbkdf2_hmac_sha256 call
+1000,5,1.2617,17438a5c4898a6da,real cryptolab_core.pbkdf2_hmac_sha256 call
+3000,1,3.7608,e0af8f5e46be4102,real cryptolab_core.pbkdf2_hmac_sha256 call
+3000,2,3.6214,e0af8f5e46be4102,real cryptolab_core.pbkdf2_hmac_sha256 call
+3000,3,3.537,e0af8f5e46be4102,real cryptolab_core.pbkdf2_hmac_sha256 call
+3000,4,3.4354,e0af8f5e46be4102,real cryptolab_core.pbkdf2_hmac_sha256 call
+3000,5,3.2702,e0af8f5e46be4102,real cryptolab_core.pbkdf2_hmac_sha256 call
+10000,1,10.8153,fd5be17142751242,real cryptolab_core.pbkdf2_hmac_sha256 call
+10000,2,10.1276,fd5be17142751242,real cryptolab_core.pbkdf2_hmac_sha256 call
+10000,3,10.7384,fd5be17142751242,real cryptolab_core.pbkdf2_hmac_sha256 call
+10000,4,10.3769,fd5be17142751242,real cryptolab_core.pbkdf2_hmac_sha256 call
+10000,5,10.9878,fd5be17142751242,real cryptolab_core.pbkdf2_hmac_sha256 call
+30000,1,33.0735,1d042526e95dcf4b,real cryptolab_core.pbkdf2_hmac_sha256 call
+30000,2,32.6877,1d042526e95dcf4b,real cryptolab_core.pbkdf2_hmac_sha256 call
+30000,3,28.5871,1d042526e95dcf4b,real cryptolab_core.pbkdf2_hmac_sha256 call
+30000,4,28.1957,1d042526e95dcf4b,real cryptolab_core.pbkdf2_hmac_sha256 call
+30000,5,33.9887,1d042526e95dcf4b,real cryptolab_core.pbkdf2_hmac_sha256 call
+100000,1,108.1208,c2e29fa9d3c0fe79,real cryptolab_core.pbkdf2_hmac_sha256 call
+100000,2,108.7024,c2e29fa9d3c0fe79,real cryptolab_core.pbkdf2_hmac_sha256 call
+100000,3,106.4636,c2e29fa9d3c0fe79,real cryptolab_core.pbkdf2_hmac_sha256 call
+100000,4,104.4849,c2e29fa9d3c0fe79,real cryptolab_core.pbkdf2_hmac_sha256 call
+100000,5,109.5219,c2e29fa9d3c0fe79,real cryptolab_core.pbkdf2_hmac_sha256 call

@@ -1,0 +1,161 @@
+PS> docker compose -f deploy/docker-compose.yml config
+name: deploy
+services:
+  api:
+    build:
+      context: D:\Nnutural\Desktop\BUPT_6\SecureProgrammingTechnologyandCaseDevelopment\期中作业\CryptoLab
+      dockerfile: deploy/Dockerfile.api
+    container_name: cryptolab-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: true
+      redis:
+        condition: service_healthy
+        required: true
+      rust-builder:
+        condition: service_completed_successfully
+        required: true
+    environment:
+      CRYPTOLAB_DATABASE_URL: postgresql+asyncpg://cryptolab:cryptolab@postgres:5432/cryptolab
+      CRYPTOLAB_ENVIRONMENT: staging
+      CRYPTOLAB_JWT_SECRET: dev-jwt-secret-change-me
+      CRYPTOLAB_MASTER_KEY_HEX: "0000000000000000000000000000000000000000000000000000000000000000"
+      CRYPTOLAB_REDIS_URL: redis://redis:6379/0
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 8000
+        published: "8000"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: rust-output
+        target: /wheels
+        read_only: true
+        volume: {}
+  frontend:
+    build:
+      context: D:\Nnutural\Desktop\BUPT_6\SecureProgrammingTechnologyandCaseDevelopment\期中作业\CryptoLab
+      dockerfile: deploy/Dockerfile.frontend
+    container_name: cryptolab-frontend
+    depends_on:
+      api:
+        condition: service_started
+        required: true
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 80
+        published: "3000"
+        protocol: tcp
+    restart: unless-stopped
+  nginx:
+    container_name: cryptolab-nginx
+    depends_on:
+      api:
+        condition: service_started
+        required: true
+      frontend:
+        condition: service_started
+        required: true
+    image: nginx:alpine
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 443
+        published: "443"
+        protocol: tcp
+      - mode: ingress
+        target: 80
+        published: "80"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: D:\Nnutural\Desktop\BUPT_6\SecureProgrammingTechnologyandCaseDevelopment\期中作业\CryptoLab\deploy\nginx.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: D:\Nnutural\Desktop\BUPT_6\SecureProgrammingTechnologyandCaseDevelopment\期中作业\CryptoLab\deploy\certs
+        target: /etc/nginx/certs
+        read_only: true
+        bind:
+          create_host_path: true
+  postgres:
+    container_name: cryptolab-postgres
+    environment:
+      POSTGRES_DB: cryptolab
+      POSTGRES_PASSWORD: cryptolab
+      POSTGRES_USER: cryptolab
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U cryptolab
+      timeout: 3s
+      interval: 5s
+      retries: 10
+    image: postgres:16-alpine
+    networks:
+      default: null
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: pgdata
+        target: /var/lib/postgresql/data
+        volume: {}
+  redis:
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+    container_name: cryptolab-redis
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      timeout: 3s
+      interval: 5s
+      retries: 10
+    image: redis:7-alpine
+    networks:
+      default: null
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: redisdata
+        target: /data
+        volume: {}
+  rust-builder:
+    build:
+      context: D:\Nnutural\Desktop\BUPT_6\SecureProgrammingTechnologyandCaseDevelopment\期中作业\CryptoLab
+      dockerfile: deploy/Dockerfile.rust
+    container_name: cryptolab-rust-builder
+    networks:
+      default: null
+    restart: "no"
+    volumes:
+      - type: volume
+        source: rust-output
+        target: /output
+        volume: {}
+networks:
+  default:
+    name: deploy_default
+volumes:
+  pgdata:
+    name: deploy_pgdata
+  redisdata:
+    name: deploy_redisdata
+  rust-output:
+    name: deploy_rust-output
+
+
+[exit=0]

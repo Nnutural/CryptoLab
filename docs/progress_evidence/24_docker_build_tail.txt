@@ -1,0 +1,4 @@
+PS> docker compose -f deploy/docker-compose.yml build 2>&1 | Select-Object -Last 80
+error during connect: this error may indicate that the docker daemon is not running: Head "http://%2F%2F.%2Fpipe%2Fdocker_engine/_ping": open //./pipe/docker_engine: The system cannot find the file specified.
+
+[exit=1]

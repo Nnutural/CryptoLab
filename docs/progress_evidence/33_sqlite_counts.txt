@@ -1,0 +1,10 @@
+PS> sqlite3 cryptolab.db .tables; select row counts
+algorithm_metrics  key_store          operation_logs     users            
+table_name         rows
+-----------------  ----
+users              8   
+key_store          11  
+operation_logs     16  
+algorithm_metrics  0   
+
+[exit=0]

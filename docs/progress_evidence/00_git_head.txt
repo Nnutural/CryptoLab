@@ -1,0 +1,5 @@
+PS> git rev-parse HEAD
+c57f053f8eeed532aa7df5a51b06210be004df40
+
+
+[exit=0]

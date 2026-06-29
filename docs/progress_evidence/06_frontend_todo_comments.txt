@@ -1,0 +1,4 @@
+PS> rg -n "TODO|FIXME" frontend/src
+
+
+[exit=1]

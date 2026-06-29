@@ -1,0 +1,4 @@
+PS> rg -n "unimplemented!" rust_core/src
+
+
+[exit=1]

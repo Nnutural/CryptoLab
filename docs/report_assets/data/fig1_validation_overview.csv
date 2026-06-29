@@ -1,0 +1,12 @@
+figure_panel,metric,category,value,status,evidence
+A,cargo test,Rust core,,passed,53 passed; 0 failed; 3 ignored
+A,pytest,API,,passed,254 passed; 0 failed; 1 deselected
+A,npm run build,Frontend,,passed,build succeeded with Vite chunk warning
+A,docker compose build,Docker,,blocked,blocked by Docker daemon availability
+D,npm test,Frontend,,blocked,TypeScript test script state from archived output
+B,cargo test,passed,53,,docs/progress_evidence/20_cargo_test_tail.txt
+B,cargo test,failed,0,,docs/progress_evidence/20_cargo_test_tail.txt
+B,cargo test,ignored,3,,docs/progress_evidence/20_cargo_test_tail.txt
+C,pytest,passed,254,,docs/progress_evidence/21_pytest_tail.txt
+C,pytest,failed,0,,docs/progress_evidence/21_pytest_tail.txt
+C,pytest,deselected,1,,docs/progress_evidence/21_pytest_tail.txt

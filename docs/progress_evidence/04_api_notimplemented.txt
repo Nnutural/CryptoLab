@@ -1,0 +1,8 @@
+PS> rg -n "NotImplementedError|raise NotImplemented" api_server/app
+api_server/app\services\demo_service.py:18:    raise NotImplementedError(
+api_server/app\services\demo_service.py:25:    raise NotImplementedError(
+api_server/app\services\demo_service.py:31:    raise NotImplementedError(
+api_server/app\services\demo_service.py:37:    raise NotImplementedError(
+
+
+[exit=0]

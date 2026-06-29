@@ -1,0 +1,4 @@
+PS> Get-ChildItem -Recurse -File frontend/src -Filter *.vue | Select-Object FullName,Length
+
+
+[exit=1]

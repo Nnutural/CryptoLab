@@ -1,0 +1,53 @@
+PS> cargo test --manifest-path rust_core/Cargo.toml --no-fail-fast 2>&1 | Select-Object -Last 50
+test modes::gcm::tests::gf_mul_identity_cases ... ok
+test modes::gcm::tests::ghash_empty_is_zero ... ok
+test modes::tests::zero_unpad_is_rejected ... ok
+test encoding::base64::tests::roundtrip_null_bytes_and_utf8 ... ok
+test modes::tests::pkcs7_adds_full_block_on_boundary ... ok
+test bigint::tests::mod_inverse_self_check ... ok
+test encoding::utf8::tests::encode_matches_rfc3629_widths ... ok
+test hash::sha1::tests::fips_180_4_classic_vectors ... ok
+test hash::hmac::tests::rfc_2202_hmac_sha1_vectors ... ok
+test pubkey::demos::tests::cube_root_exact_and_floor_cases ... ok
+test modes::tests::ansi_x923_roundtrip_and_rejects_bad_bytes ... ok
+test pubkey::ecc::tests::double_matches_add ... ok
+test hash::sha2::tests::sha256_nist_short_vectors ... ok
+test pubkey::ecc::tests::secp160r1_base_point_is_on_curve ... ok
+test pubkey::rsa::tests::rsa_crt_decrypt_sign_stress_1000 ... ignored, RSA-1024 CRT stress test is intentionally slow
+test pubkey::rsa::tests::rsa_keygen_oaep_pss_roundtrip ... ignored, RSA-1024 key generation is intentionally slow
+test pubkey::rsa::tests::mgf1_is_deterministic ... ok
+test pubkey::rsa::tests::private_from_parts_preserves_public_exponent_for_blinding ... ok
+test pubkey::rsa::tests::crt_recombination_handles_m1_less_than_m2 ... ok
+test pubkey::rsa::tests::rejects_low_public_exponent ... ok
+test pubkey::rsa::tests::crt_recombination_reduces_m2_mod_p_before_subtracting ... ok
+test symmetric::aes::tests::aes128_cbc_nist_sp_800_38a_f_2_1 ... ok
+test pubkey::rsa::tests::blinded_decrypt_matches_plain ... ok
+test symmetric::aes::trace::aes192_and_aes256_trace_shapes_match_key_size ... ok
+test symmetric::aes::tests::aes128_gcm_nist_sp_800_38d_cases ... ok
+test symmetric::aes::tests::aes128_ctr_nist_sp_800_38a_f_5_1 ... ok
+test symmetric::aes::tests::aes128_ecb_nist_sp_800_38a_f_1_1 ... ok
+test symmetric::aes::tests::aes192_and_aes256_ecb_vectors ... ok
+test symmetric::rc6::tests::rc6_paper_appendix_b_zero_vector ... ok
+test symmetric::aes::trace::fips_197_aes128_trace_matches_every_intermediate_state ... ok
+test symmetric::sm4::tests::gb_t_32907_appendix_a_single_block ... ok
+test pubkey::ecc::tests::group_law_for_small_scalars ... ok
+test pubkey::demos::tests::ecdsa_recover_d_from_reused_k ... ok
+test hash::sha1::tests::million_a_vector ... ok
+test bigint::tests::miller_rabin_accepts_first_100_odd_primes ... ok
+test hash::pbkdf2::tests::pbkdf2_hmac_sha256_known_vectors ... ok
+test pubkey::ecc::tests::order_times_base_point_is_infinity ... ok
+test hash::sha1::tests::streaming_matches_one_shot_for_random_1mb ... ok
+test hash::sha2::tests::sha256_streaming_matches_one_shot_for_random_1mb ... ok
+test pubkey::ecdsa::tests::tampering_fails ... ok
+test pubkey::ecdsa::tests::sign_verify_roundtrip ... ok
+
+test result: ok. 53 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.36s
+
+   Doc-tests cryptolab_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+[exit=0]

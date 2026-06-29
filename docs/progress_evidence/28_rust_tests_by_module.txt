@@ -1,0 +1,90 @@
+PS> @"
+from pathlib import Path
+import re
+for p in sorted(Path("rust_core/src").rglob("*.rs")):
+    text=p.read_text(encoding="utf-8", errors="ignore")
+    tests=re.findall(r"#\[test\]\s*\n\s*(?:#\[[^\]]+\]\s*\n\s*)*fn\s+([a-zA-Z0-9_]+)", text)
+    ignored=re.findall(r"#\[ignore(?:\s*=\s*\"[^\"]*\")?\]\s*\n\s*#\[test\]|#\[test\]\s*\n\s*#\[ignore", text)
+    if tests:
+        print(f"{p}: {len(tests)} tests, {len(ignored)} ignored markers")
+        for t in tests: print(f"  {t}")
+"@ | python -
+rust_core\src\bigint\mod.rs: 3 tests, 1 ignored markers
+  mod_inverse_self_check
+  miller_rabin_accepts_first_100_odd_primes
+  random_512_bit_prime_is_prime
+rust_core\src\encoding\base64.rs: 4 tests, 0 ignored markers
+  rfc4648_section_10_vectors
+  roundtrip_null_bytes_and_utf8
+  roundtrip_seeded_random_1kb
+  invalid_decode_inputs_are_rejected
+rust_core\src\encoding\utf8.rs: 2 tests, 0 ignored markers
+  encode_matches_rfc3629_widths
+  decode_rejects_ill_formed_rfc3629_sequences
+rust_core\src\hash\hmac.rs: 3 tests, 0 ignored markers
+  rfc_2202_hmac_sha1_vectors
+  rfc_4231_hmac_sha256_vectors
+  verify_hmac_sha256_uses_constant_time_compare_path
+rust_core\src\hash\pbkdf2.rs: 2 tests, 0 ignored markers
+  pbkdf2_hmac_sha256_known_vectors
+  rejects_invalid_parameters
+rust_core\src\hash\ripemd.rs: 1 tests, 0 ignored markers
+  original_ripemd160_vectors
+rust_core\src\hash\sha1.rs: 3 tests, 0 ignored markers
+  fips_180_4_classic_vectors
+  million_a_vector
+  streaming_matches_one_shot_for_random_1mb
+rust_core\src\hash\sha2.rs: 6 tests, 0 ignored markers
+  sha256_nist_short_vectors
+  sha224_nist_short_vectors
+  sha512_nist_short_vectors
+  sha384_nist_short_vectors
+  sha256_streaming_matches_one_shot_for_random_1mb
+  sha2_reference_validation_against_rustcrypto
+rust_core\src\hash\sha3.rs: 2 tests, 0 ignored markers
+  fips_202_sha3_256_vectors
+  fips_202_sha3_512_vectors
+rust_core\src\modes\gcm.rs: 2 tests, 0 ignored markers
+  ghash_empty_is_zero
+  gf_mul_identity_cases
+rust_core\src\modes\mod.rs: 3 tests, 0 ignored markers
+  pkcs7_adds_full_block_on_boundary
+  zero_unpad_is_rejected
+  ansi_x923_roundtrip_and_rejects_bad_bytes
+rust_core\src\pubkey\demos.rs: 3 tests, 0 ignored markers
+  cube_root_exact_and_floor_cases
+  raw_rsa_encrypt_is_plain_modpow
+  ecdsa_recover_d_from_reused_k
+rust_core\src\pubkey\ecc.rs: 4 tests, 0 ignored markers
+  secp160r1_base_point_is_on_curve
+  double_matches_add
+  order_times_base_point_is_infinity
+  group_law_for_small_scalars
+rust_core\src\pubkey\ecdsa.rs: 2 tests, 0 ignored markers
+  sign_verify_roundtrip
+  tampering_fails
+rust_core\src\pubkey\rsa.rs: 8 tests, 2 ignored markers
+  rejects_low_public_exponent
+  mgf1_is_deterministic
+  rsa_keygen_oaep_pss_roundtrip
+  blinded_decrypt_matches_plain
+  crt_recombination_handles_m1_less_than_m2
+  crt_recombination_reduces_m2_mod_p_before_subtracting
+  private_from_parts_preserves_public_exponent_for_blinding
+  rsa_crt_decrypt_sign_stress_1000
+rust_core\src\symmetric\aes.rs: 7 tests, 0 ignored markers
+  aes128_ecb_nist_sp_800_38a_f_1_1
+  aes128_cbc_nist_sp_800_38a_f_2_1
+  aes128_ctr_nist_sp_800_38a_f_5_1
+  aes128_gcm_nist_sp_800_38d_cases
+  aes192_and_aes256_ecb_vectors
+  fips_197_aes128_trace_matches_every_intermediate_state
+  aes192_and_aes256_trace_shapes_match_key_size
+rust_core\src\symmetric\rc6.rs: 1 tests, 0 ignored markers
+  rc6_paper_appendix_b_zero_vector
+rust_core\src\symmetric\sm4.rs: 2 tests, 0 ignored markers
+  gb_t_32907_appendix_a_single_block
+  gb_t_32907_appendix_a_million_iterations
+
+
+[exit=0]

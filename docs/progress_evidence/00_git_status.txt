@@ -1,0 +1,8 @@
+PS> git status --short
+ D .codegraph/daemon.pid
+ M README.md
+ M cryptolab.db
+?? docs/progress_evidence/
+
+
+[exit=0]

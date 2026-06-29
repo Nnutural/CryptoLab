@@ -1,0 +1,95 @@
+PS> @"
+from pathlib import Path
+import ast, re
+root=Path("api_server/app")
+for rp in sorted((root/"routers").glob("*.py")):
+    if rp.name=="__init__.py": continue
+    text=rp.read_text(encoding="utf-8")
+    print(f"==== {rp} ====")
+    for m in re.finditer(r"@router\.(get|post|delete)\(\"([^\"]*)\"[^\n]*\)\s*\nasync def ([^(]+)", text):
+        method,path,fn=m.groups()
+        body=text[m.end(): m.end()+900]
+        calls=sorted(set(re.findall(r"([a-zA-Z_]+_service|[a-zA-Z_]+Service|cryptolab_core|core)\.([a-zA-Z0-9_]+)", body)))
+        print(f"{method.upper()} {path} -> {fn}; calls={calls}")
+    imports=[line for line in text.splitlines() if line.startswith("from app.schemas") or line.startswith("from app.services")]
+    for line in imports: print("  "+line)
+"@ | python -
+==== api_server\app\routers\audit.py ====
+GET /logs -> list_logs; calls=[('audit_service', 'query_logs'), ('audit_service', 'row_to_item')]
+  from app.schemas.audit import OperationLogItem
+  from app.schemas.common import APIResponse
+  from app.services import audit_service
+==== api_server\app\routers\auth.py ====
+POST /register -> register; calls=[('user_service', 'login'), ('user_service', 'logout'), ('user_service', 'register')]
+POST /login -> login; calls=[('user_service', 'login'), ('user_service', 'logout'), ('user_service', 'me')]
+POST /logout -> logout; calls=[('user_service', 'logout'), ('user_service', 'me')]
+GET /me -> me; calls=[('user_service', 'me')]
+  from app.schemas.auth import (
+  from app.schemas.common import APIResponse
+  from app.services import user_service
+==== api_server\app\routers\benchmark.py ====
+GET /{algo} -> benchmark; calls=[('benchmark_service', 'measure')]
+  from app.schemas.benchmark import BenchmarkResult
+  from app.schemas.common import APIResponse
+  from app.services import benchmark_service
+==== api_server\app\routers\demos.py ====
+POST /ecb_image_leak -> ecb_image_leak; calls=[('demos_service', 'EcbImageLeakService'), ('demos_service', 'EcdsaKReuseService'), ('demos_service', 'demo_access_dependency'), ('demos_service', 'ok')]
+POST /ecdsa_k_reuse -> ecdsa_k_reuse; calls=[('demos_service', 'EcdsaKReuseService'), ('demos_service', 'RsaLowExponentService'), ('demos_service', 'demo_access_dependency'), ('demos_service', 'ok')]
+POST /rsa_low_exponent -> rsa_low_exponent; calls=[('demos_service', 'Pbkdf2IterationImpactService'), ('demos_service', 'RsaLowExponentService'), ('demos_service', 'demo_access_dependency'), ('demos_service', 'ok')]
+POST /pbkdf2_iteration_impact -> pbkdf2_iteration_impact; calls=[('demos_service', 'Pbkdf2IterationImpactService'), ('demos_service', 'demo_access_dependency'), ('demos_service', 'ok')]
+  from app.schemas import demos as demos_schema
+  from app.services import demos_service
+==== api_server\app\routers\encoding.py ====
+POST /base64/{op} -> base64; calls=[('encoding_service', 'base64_decode'), ('encoding_service', 'base64_encode')]
+POST /utf8/{op} -> utf8; calls=[('encoding_service', 'utf8_decode_op'), ('encoding_service', 'utf8_encode_op')]
+  from app.schemas.common import APIResponse
+  from app.schemas.encoding import DecodeRequest, DecodeResponse, EncodeRequest, EncodeResponse
+  from app.services import encoding_service
+==== api_server\app\routers\hash.py ====
+POST /hmac/{algo} -> hmac; calls=[('hash_service', 'hash_'), ('hash_service', 'hmac'), ('hash_service', 'pbkdf2')]
+POST /pbkdf2 -> pbkdf2; calls=[('hash_service', 'hash_'), ('hash_service', 'pbkdf2')]
+POST /{algo} -> hash_; calls=[('hash_service', 'hash_')]
+  from app.schemas.common import APIResponse
+  from app.schemas.hash import (
+  from app.services import hash_service
+==== api_server\app\routers\keys.py ====
+GET  -> list_keys; calls=[('key_service', 'list_for_user')]
+GET /{key_id}/public -> get_public_material; calls=[('key_service', 'fetch_public_material'), ('key_service', 'revoke')]
+DELETE /{key_id} -> revoke_key; calls=[('key_service', 'revoke')]
+  from app.schemas.common import APIResponse
+  from app.schemas.keys import KeyListItem, KeyPublicMaterialResponse
+  from app.services import key_service
+==== api_server\app\routers\metrics.py ====
+GET  -> list_metrics; calls=[('metrics_service', 'query_metrics'), ('metrics_service', 'row_to_item')]
+  from app.schemas.common import APIResponse
+  from app.schemas.metrics import AlgorithmMetricItem
+  from app.services import metrics_service
+==== api_server\app\routers\pubkey.py ====
+POST /rsa/keygen -> rsa_keygen; calls=[('pubkey_service', 'rsa_decrypt'), ('pubkey_service', 'rsa_encrypt'), ('pubkey_service', 'rsa_keygen')]
+POST /rsa/encrypt -> rsa_encrypt; calls=[('pubkey_service', 'rsa_decrypt'), ('pubkey_service', 'rsa_encrypt'), ('pubkey_service', 'rsa_sign')]
+POST /rsa/decrypt -> rsa_decrypt; calls=[('pubkey_service', 'rsa_decrypt'), ('pubkey_service', 'rsa_sign'), ('pubkey_service', 'rsa_verify')]
+POST /rsa/sign -> rsa_sign; calls=[('pubkey_service', 'ecc_keygen'), ('pubkey_service', 'rsa_sign'), ('pubkey_service', 'rsa_verify')]
+POST /rsa/verify -> rsa_verify; calls=[('pubkey_service', 'ecc_keygen'), ('pubkey_service', 'ecdsa_sign'), ('pubkey_service', 'rsa_verify')]
+POST /ecc/keygen -> ecc_keygen; calls=[('pubkey_service', 'ecc_keygen'), ('pubkey_service', 'ecdsa_sign'), ('pubkey_service', 'ecdsa_verify')]
+POST /ecdsa/sign -> ecdsa_sign; calls=[('pubkey_service', 'ecdsa_sign'), ('pubkey_service', 'ecdsa_verify')]
+POST /ecdsa/verify -> ecdsa_verify; calls=[('pubkey_service', 'ecdsa_verify')]
+  from app.schemas.common import APIResponse
+  from app.schemas.pubkey import (
+  from app.services import pubkey_service
+==== api_server\app\routers\scenarios.py ====
+POST /secure_file_transfer/send -> secure_file_transfer_send; calls=[('scenario_service', 'secure_file_receive'), ('scenario_service', 'secure_file_send')]
+POST /secure_file_transfer/receive -> secure_file_transfer_receive; calls=[('scenario_service', 'secure_file_receive')]
+  from app.schemas.common import APIResponse
+  from app.schemas.scenarios import (
+  from app.services import scenario_service
+==== api_server\app\routers\symmetric.py ====
+POST /keygen -> keygen; calls=[('symmetric_service', 'aes_encrypt_with_trace_op'), ('symmetric_service', 'encrypt'), ('symmetric_service', 'keygen')]
+POST /{algo}/encrypt -> encrypt; calls=[('symmetric_service', 'aes_encrypt_with_trace_op'), ('symmetric_service', 'decrypt'), ('symmetric_service', 'encrypt')]
+POST /{algo}/decrypt -> decrypt; calls=[('symmetric_service', 'decrypt')]
+  from app.schemas.common import APIResponse
+  from app.schemas.keys import SymmetricKeygenRequest
+  from app.schemas.symmetric import (
+  from app.services import symmetric_service
+
+
+[exit=0]

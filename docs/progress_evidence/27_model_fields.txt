@@ -1,0 +1,65 @@
+PS> @"
+from pathlib import Path
+import ast
+for p in sorted(Path("api_server/app/models").glob("*.py")):
+    if p.name=="__init__.py": continue
+    text=p.read_text(encoding="utf-8")
+    tree=ast.parse(text)
+    print(f"==== {p} ====")
+    for cls in [n for n in tree.body if isinstance(n, ast.ClassDef)]:
+        print(f"class {cls.name}")
+        for item in cls.body:
+            if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+                print(f"  {item.target.id}")
+"@ | python -
+==== api_server\app\models\algorithm_metric.py ====
+class AlgorithmMetric
+  id
+  algorithm
+  operation
+  data_size_bytes
+  duration_ns
+  memory_kb
+  recorded_at
+==== api_server\app\models\key_store.py ====
+class KeyStore
+  id
+  user_id
+  key_type
+  algorithm
+  key_material_encrypted
+  iv
+  auth_tag
+  paired_key_id
+  label
+  expires_at
+  deleted_at
+  user
+==== api_server\app\models\operation_log.py ====
+class OperationLog
+  id
+  trace_id
+  user_id
+  operation
+  algorithm
+  key_id
+  input_hash
+  output_hash
+  status_code
+  duration_ms
+  client_ip
+  user_agent
+  user
+==== api_server\app\models\user.py ====
+class User
+  id
+  username
+  password_hash
+  salt
+  role
+  last_login_at
+  keys
+  logs
+
+
+[exit=0]

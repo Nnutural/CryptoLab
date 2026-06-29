@@ -1,0 +1,66 @@
+PS> rg -n "redis|rate_limit|jwt_blacklist|blacklist|cache" api_server/app -g "*.py"
+api_server/app\main.py:20:from app.core.cache import create_cache
+api_server/app\main.py:26:from app.middleware.rate_limit import RateLimitMiddleware
+api_server/app\main.py:50:    cache = getattr(app.state, "cache", None)
+api_server/app\main.py:51:    if cache is not None:
+api_server/app\main.py:52:        await cache.close()
+api_server/app\main.py:70:    app.state.cache = create_cache()
+api_server/app\middleware\rate_limit.py:10:from app.core.cache import CacheBackend
+api_server/app\middleware\rate_limit.py:26:            settings.login_rate_limit_per_minute
+api_server/app\middleware\rate_limit.py:28:            else settings.rate_limit_per_minute
+api_server/app\middleware\rate_limit.py:30:        cache_key = f"rate_limit:{_client_ip(request)}:{_path_prefix(path)}"
+api_server/app\middleware\rate_limit.py:31:        count, ttl = await _cache(request).incr_with_ttl(
+api_server/app\middleware\rate_limit.py:32:            cache_key,
+api_server/app\middleware\rate_limit.py:33:            settings.rate_limit_window_seconds,
+api_server/app\middleware\rate_limit.py:56:def _cache(request: Request) -> CacheBackend:
+api_server/app\middleware\rate_limit.py:57:    cache = getattr(request.app.state, "cache", None)
+api_server/app\middleware\rate_limit.py:58:    if cache is None:
+api_server/app\middleware\rate_limit.py:59:        raise RuntimeError("cache backend is not initialized")
+api_server/app\middleware\rate_limit.py:60:    return cache
+api_server/app\middleware\auth.py:14:from app.core.cache import CacheBackend
+api_server/app\middleware\auth.py:82:        cache = _cache(request)
+api_server/app\middleware\auth.py:83:        if await cache.get(f"jwt_blacklist:{jti}") is not None:
+api_server/app\middleware\auth.py:120:def _cache(request: Request) -> CacheBackend:
+api_server/app\middleware\auth.py:121:    cache = getattr(request.app.state, "cache", None)
+api_server/app\middleware\auth.py:122:    if cache is None:
+api_server/app\middleware\auth.py:123:        raise RuntimeError("cache backend is not initialized")
+api_server/app\middleware\auth.py:124:    return cache
+api_server/app\core\config.py:5:from functools import lru_cache
+api_server/app\core\config.py:52:    redis_url: str = "memory://"
+api_server/app\core\config.py:55:    rate_limit_window_seconds: int = 60
+api_server/app\core\config.py:56:    rate_limit_per_minute: int = 60
+api_server/app\core\config.py:57:    login_rate_limit_per_minute: int = 5
+api_server/app\core\config.py:63:@lru_cache(maxsize=1)
+api_server/app\services\benchmark_service.py:8:from functools import lru_cache
+api_server/app\services\benchmark_service.py:375:@lru_cache(maxsize=1)
+api_server/app\services\benchmark_service.py:385:@lru_cache(maxsize=1)
+api_server/app\core\cache.py:1:"""Small async cache facade used for rate limiting and JWT blacklists."""
+api_server/app\core\cache.py:92:    """Redis-backed implementation used when CRYPTOLAB_REDIS_URL is redis://."""
+api_server/app\core\cache.py:95:        from redis import asyncio as redis_async
+api_server/app\core\cache.py:97:        self._redis = redis_async.from_url(url, decode_responses=True)
+api_server/app\core\cache.py:100:        async with self._redis.pipeline(transaction=True) as pipe:
+api_server/app\core\cache.py:105:            await self._redis.expire(key, ttl_seconds)
+api_server/app\core\cache.py:110:        await self._redis.setex(key, ttl_seconds, value)
+api_server/app\core\cache.py:113:        value = await self._redis.get(key)
+api_server/app\core\cache.py:117:        return int(await self._redis.ttl(key))
+api_server/app\core\cache.py:120:        await self._redis.flushdb()
+api_server/app\core\cache.py:123:        await self._redis.aclose()
+api_server/app\core\cache.py:126:def create_cache() -> CacheBackend:
+api_server/app\core\cache.py:127:    """Create the configured cache backend."""
+api_server/app\core\cache.py:128:    redis_url = get_settings().redis_url
+api_server/app\core\cache.py:129:    if redis_url.startswith("redis://") or redis_url.startswith("rediss://"):
+api_server/app\core\cache.py:130:        return RedisCache(redis_url)
+api_server/app\core\kek.py:4:library is used.  The derived KEK is cached at module level so the
+api_server/app\core\kek.py:53:    """Return the cached KEK, deriving it on first call."""
+api_server/app\core\kek.py:68:def reset_kek_cache() -> None:
+api_server/app\core\kek.py:69:    """Clear the cached KEK — used by tests that switch master keys."""
+api_server/app\routers\auth.py:51:    """Revoke the current JWT by adding its jti to the blacklist."""
+api_server/app\routers\auth.py:52:    await user_service.logout(request.app.state.cache, user)
+api_server/app\services\user_service.py:12:from app.core.cache import CacheBackend
+api_server/app\services\user_service.py:86:async def logout(cache: CacheBackend, user: AuthenticatedUser) -> None:
+api_server/app\services\user_service.py:90:        await cache.setex(f"jwt_blacklist:{user.jti}", ttl, "1")
+api_server/app\core\security.py:113:    """Fresh JWT id for blacklist lookups."""
+api_server/app\core\logging.py:27:        cache_logger_on_first_use=True,
+
+
+[exit=0]

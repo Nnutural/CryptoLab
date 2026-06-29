@@ -1,0 +1,8 @@
+status_codes=28
+status_code_references=211
+router_endpoints=32
+frontend_views=12
+frontend_api_modules=12
+alembic_migrations=2
+pytest_summary= 254 passed, 1 deselected in 81.19s (0:01:21)
+cargo_summary= test result: ok. 53 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.36s

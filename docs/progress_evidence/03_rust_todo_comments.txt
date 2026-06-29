@@ -1,0 +1,4 @@
+PS> rg -n "TODO|FIXME|XXX" rust_core/src
+
+
+[exit=1]

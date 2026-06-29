@@ -1,0 +1,8 @@
+PS> Push-Location frontend; npm test 2>&1 | Select-Object -Last 20; Pop-Location
+npm error Missing script: "test"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: D:\Nnutural\Desktop\BUPT_6\SecureProgrammingTechnologyandCaseDevelopment\期中作业\CryptoLab\.npm-cache\_logs\2026-06-29T09_31_15_327Z-debug-0.log
+
+[exit=1]

@@ -1,0 +1,91 @@
+PS> Get-ChildItem frontend/src/views -File | Select-Object Name,Length | Sort-Object Name; Get-ChildItem frontend/src/api -File | Select-Object Name,Length | Sort-Object Name; rg -n "createBrowserRouter|Route|path:" frontend/src/router frontend/src -g "*.tsx" -g "*.ts"
+
+Name               Length
+----               ------
+AuditView.tsx       13671
+BenchmarkView.tsx   11837
+Dashboard.tsx       15695
+DemosView.tsx       19140
+EccView.tsx         12920
+EncodingView.tsx     7847
+HashView.tsx         7756
+HmacPbkdf2View.tsx   8962
+KeysView.tsx        13351
+RsaView.tsx         16410
+ScenariosView.tsx   19315
+SymmetricView.tsx   19418
+audit.ts              868
+auth.ts               928
+benchmark.ts          177
+client.ts             669
+demos.ts              588
+encoding.ts           339
+hash.ts               576
+keys.ts              1060
+metrics.ts            906
+pubkey.ts            1416
+scenarios.ts          355
+symmetric.ts         1044
+frontend/src/router\index.tsx:1:import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+frontend/src/router\index.tsx:34:export function AppRouter() {
+frontend/src/router\index.tsx:36:    <BrowserRouter>
+frontend/src/router\index.tsx:37:      <Routes>
+frontend/src/router\index.tsx:38:        <Route element={<PublicOnly />}>
+frontend/src/router\index.tsx:39:          <Route path="/login" element={<LoginView />} />
+frontend/src/router\index.tsx:40:        </Route>
+frontend/src/router\index.tsx:41:        <Route element={<RequireAuth />}>
+frontend/src/router\index.tsx:42:          <Route path="/dashboard" element={<Dashboard />} />
+frontend/src/router\index.tsx:43:          <Route path="/symmetric" element={<SymmetricView />} />
+frontend/src/router\index.tsx:44:          <Route path="/hash" element={<HashView />} />
+frontend/src/router\index.tsx:45:          <Route path="/hmac-pbkdf2" element={<HmacPbkdf2View />} />
+frontend/src/router\index.tsx:46:          <Route path="/encoding" element={<EncodingView />} />
+frontend/src/router\index.tsx:47:          <Route path="/rsa" element={<RsaView />} />
+frontend/src/router\index.tsx:48:          <Route path="/ecc" element={<EccView />} />
+frontend/src/router\index.tsx:49:          <Route path="/keys" element={<KeysView />} />
+frontend/src/router\index.tsx:50:          <Route path="/audit" element={<AuditView />} />
+frontend/src/router\index.tsx:51:          <Route path="/benchmark" element={<BenchmarkView />} />
+frontend/src/router\index.tsx:52:          <Route path="/demos" element={<DemosView />} />
+frontend/src/router\index.tsx:53:          <Route path="/scenarios" element={<ScenariosView />} />
+frontend/src/router\index.tsx:54:        </Route>
+frontend/src/router\index.tsx:55:        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+frontend/src/router\index.tsx:56:      </Routes>
+frontend/src/router\index.tsx:57:    </BrowserRouter>
+frontend/src\main.tsx:3:import { AppRouter } from "@/router";
+frontend/src\main.tsx:8:    <AppRouter />
+frontend/src\views\Dashboard.tsx:32:import type { RouteKey } from "@/components/nav";
+frontend/src\views\Dashboard.tsx:98:  route: RouteKey;
+frontend/src\views\Dashboard.tsx:232:  const handleNavigate = (key: RouteKey) => navigate("/" + key);
+frontend/src\components\nav.ts:17:export type RouteKey =
+frontend/src\components\nav.ts:32:  key: RouteKey;
+frontend/src\components\nav.ts:81:export const ROUTE_TITLES: Record<RouteKey, { title: string; subtitle: string; breadcrumb: string[] }> =
+frontend/src\components\Shell.tsx:14:import { NAV_GROUPS, type RouteKey } from "./nav";
+frontend/src\components\Shell.tsx:28:  const route = (location.pathname.slice(1) || "dashboard") as RouteKey;
+frontend/src\components\Shell.tsx:35:  const handleNavigate = (key: RouteKey) => {
+frontend/src\router\index.tsx:1:import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+frontend/src\router\index.tsx:34:export function AppRouter() {
+frontend/src\router\index.tsx:36:    <BrowserRouter>
+frontend/src\router\index.tsx:37:      <Routes>
+frontend/src\router\index.tsx:38:        <Route element={<PublicOnly />}>
+frontend/src\router\index.tsx:39:          <Route path="/login" element={<LoginView />} />
+frontend/src\router\index.tsx:40:        </Route>
+frontend/src\router\index.tsx:41:        <Route element={<RequireAuth />}>
+frontend/src\router\index.tsx:42:          <Route path="/dashboard" element={<Dashboard />} />
+frontend/src\router\index.tsx:43:          <Route path="/symmetric" element={<SymmetricView />} />
+frontend/src\router\index.tsx:44:          <Route path="/hash" element={<HashView />} />
+frontend/src\router\index.tsx:45:          <Route path="/hmac-pbkdf2" element={<HmacPbkdf2View />} />
+frontend/src\router\index.tsx:46:          <Route path="/encoding" element={<EncodingView />} />
+frontend/src\router\index.tsx:47:          <Route path="/rsa" element={<RsaView />} />
+frontend/src\router\index.tsx:48:          <Route path="/ecc" element={<EccView />} />
+frontend/src\router\index.tsx:49:          <Route path="/keys" element={<KeysView />} />
+frontend/src\router\index.tsx:50:          <Route path="/audit" element={<AuditView />} />
+frontend/src\router\index.tsx:51:          <Route path="/benchmark" element={<BenchmarkView />} />
+frontend/src\router\index.tsx:52:          <Route path="/demos" element={<DemosView />} />
+frontend/src\router\index.tsx:53:          <Route path="/scenarios" element={<ScenariosView />} />
+frontend/src\router\index.tsx:54:        </Route>
+frontend/src\router\index.tsx:55:        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+frontend/src\router\index.tsx:56:      </Routes>
+frontend/src\router\index.tsx:57:    </BrowserRouter>
+
+
+
+[exit=0]

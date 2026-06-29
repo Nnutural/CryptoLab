@@ -1,0 +1,255 @@
+PS> Get-ChildItem api_server/alembic/versions -File | ForEach-Object { "==== $($_.Name) ===="; Get-Content -Raw $_.FullName }
+==== .gitkeep ====
+==== 0001_initial_schema.py ====
+"""initial Phase F schema
+
+Revision ID: 0001_initial
+Revises:
+Create Date: 2026-06-07 00:00:00
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+
+import sqlalchemy as sa
+
+from alembic import op
+
+revision: str = "0001_initial"
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+
+def upgrade() -> None:
+    bind = op.get_bind()
+
+    op.create_table(
+        "users",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column("username", sa.String(64), nullable=False),
+        sa.Column("password_hash", sa.String(255), nullable=False),
+        sa.Column("salt", sa.LargeBinary(), nullable=False),
+        sa.Column("role", sa.String(16), nullable=False, server_default="user"),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column("last_login_at", sa.DateTime(timezone=True), nullable=True),
+        sa.UniqueConstraint("username", name="uq_users_username"),
+    )
+    op.create_index("ix_users_username", "users", ["username"], unique=True)
+
+    op.create_table(
+        "key_store",
+        sa.Column("id", sa.String(36), primary_key=True),
+        sa.Column(
+            "user_id",
+            sa.Integer(),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column("key_type", sa.String(16), nullable=False),
+        sa.Column("algorithm", sa.String(32), nullable=False),
+        sa.Column("key_material_encrypted", sa.LargeBinary(), nullable=False),
+        sa.Column("iv", sa.LargeBinary(), nullable=False),
+        sa.Column("auth_tag", sa.LargeBinary(), nullable=False),
+        sa.Column("paired_key_id", sa.String(36), nullable=True),
+        sa.Column("label", sa.String(128), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
+    )
+    op.create_index("ix_key_store_user_id", "key_store", ["user_id"])
+    op.create_index("ix_key_store_paired_key_id", "key_store", ["paired_key_id"])
+    op.create_index("ix_key_store_deleted_at", "key_store", ["deleted_at"])
+
+    op.create_table(
+        "operation_logs",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column("trace_id", sa.String(36), nullable=False),
+        sa.Column(
+            "user_id",
+            sa.Integer(),
+            sa.ForeignKey("users.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column("operation", sa.String(64), nullable=False),
+        sa.Column("algorithm", sa.String(32), nullable=True),
+        sa.Column("key_id", sa.String(36), nullable=True),
+        sa.Column("input_hash", sa.String(64), nullable=True),
+        sa.Column("output_hash", sa.String(64), nullable=True),
+        sa.Column("status_code", sa.Integer(), nullable=False),
+        sa.Column("duration_ms", sa.Double(), nullable=False),
+        sa.Column("client_ip", sa.String(64), nullable=True),
+        sa.Column("user_agent", sa.Text(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+    )
+    op.create_index("ix_operation_logs_trace_id", "operation_logs", ["trace_id"])
+    op.create_index("ix_operation_logs_user_id", "operation_logs", ["user_id"])
+    op.create_index("ix_operation_logs_operation", "operation_logs", ["operation"])
+    op.create_index("ix_operation_logs_algorithm", "operation_logs", ["algorithm"])
+    op.create_index("ix_operation_logs_created_at", "operation_logs", ["created_at"])
+
+    if bind.dialect.name == "postgresql":
+        op.execute(
+            """
+            CREATE OR REPLACE FUNCTION operation_logs_immutable()
+            RETURNS trigger AS $$
+            BEGIN
+                RAISE EXCEPTION 'operation_logs is append-only; % is forbidden', TG_OP;
+            END;
+            $$ LANGUAGE plpgsql;
+            """
+        )
+        op.execute(
+            """
+            CREATE TRIGGER operation_logs_no_update
+            BEFORE UPDATE OR DELETE ON operation_logs
+            FOR EACH ROW EXECUTE FUNCTION operation_logs_immutable();
+            """
+        )
+
+    op.create_table(
+        "algorithm_metrics",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column("algorithm", sa.String(32), nullable=False),
+        sa.Column("data_size_bytes", sa.BigInteger(), nullable=False),
+        sa.Column("operation", sa.String(32), nullable=False),
+        sa.Column("duration_ns", sa.BigInteger(), nullable=False),
+        sa.Column("memory_kb", sa.Integer(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+    )
+    op.create_index("ix_algorithm_metrics_algorithm", "algorithm_metrics", ["algorithm"])
+
+
+def downgrade() -> None:
+    bind = op.get_bind()
+
+    op.drop_index("ix_algorithm_metrics_algorithm", table_name="algorithm_metrics")
+    op.drop_table("algorithm_metrics")
+
+    if bind.dialect.name == "postgresql":
+        op.execute("DROP TRIGGER IF EXISTS operation_logs_no_update ON operation_logs;")
+        op.execute("DROP FUNCTION IF EXISTS operation_logs_immutable();")
+    op.drop_index("ix_operation_logs_created_at", table_name="operation_logs")
+    op.drop_index("ix_operation_logs_algorithm", table_name="operation_logs")
+    op.drop_index("ix_operation_logs_operation", table_name="operation_logs")
+    op.drop_index("ix_operation_logs_user_id", table_name="operation_logs")
+    op.drop_index("ix_operation_logs_trace_id", table_name="operation_logs")
+    op.drop_table("operation_logs")
+
+    op.drop_index("ix_key_store_deleted_at", table_name="key_store")
+    op.drop_index("ix_key_store_paired_key_id", table_name="key_store")
+    op.drop_index("ix_key_store_user_id", table_name="key_store")
+    op.drop_table("key_store")
+
+    op.drop_index("ix_users_username", table_name="users")
+    op.drop_table("users")
+
+==== 0002_fix_algorithm_metrics_schema.py ====
+"""fix algorithm_metrics schema
+
+Revision ID: 0002_algorithm_metrics
+Revises: 0001_initial
+Create Date: 2026-06-08 15:30:00
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+
+import sqlalchemy as sa
+
+from alembic import op
+
+revision: str = "0002_algorithm_metrics"
+down_revision: str | None = "0001_initial"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+
+def upgrade() -> None:
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = {column["name"] for column in inspector.get_columns("algorithm_metrics")}
+    indexes = {index["name"] for index in inspector.get_indexes("algorithm_metrics")}
+
+    if "created_at" in columns and "recorded_at" not in columns:
+        with op.batch_alter_table("algorithm_metrics") as batch_op:
+            batch_op.alter_column(
+                "created_at",
+                new_column_name="recorded_at",
+                existing_type=sa.DateTime(timezone=True),
+                existing_nullable=False,
+                existing_server_default=sa.func.now(),
+            )
+
+    if bind.dialect.name != "sqlite":
+        op.alter_column(
+            "algorithm_metrics",
+            "id",
+            existing_type=sa.Integer(),
+            type_=sa.BigInteger(),
+            existing_nullable=False,
+            autoincrement=True,
+        )
+
+    if "ix_algorithm_metrics_operation" not in indexes:
+        op.create_index("ix_algorithm_metrics_operation", "algorithm_metrics", ["operation"])
+    if "ix_algorithm_metrics_recorded_at" not in indexes:
+        op.create_index("ix_algorithm_metrics_recorded_at", "algorithm_metrics", ["recorded_at"])
+
+
+def downgrade() -> None:
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = {column["name"] for column in inspector.get_columns("algorithm_metrics")}
+    indexes = {index["name"] for index in inspector.get_indexes("algorithm_metrics")}
+
+    if "ix_algorithm_metrics_recorded_at" in indexes:
+        op.drop_index("ix_algorithm_metrics_recorded_at", table_name="algorithm_metrics")
+    if "ix_algorithm_metrics_operation" in indexes:
+        op.drop_index("ix_algorithm_metrics_operation", table_name="algorithm_metrics")
+
+    if bind.dialect.name != "sqlite":
+        op.alter_column(
+            "algorithm_metrics",
+            "id",
+            existing_type=sa.BigInteger(),
+            type_=sa.Integer(),
+            existing_nullable=False,
+            autoincrement=True,
+        )
+
+    if "recorded_at" in columns and "created_at" not in columns:
+        with op.batch_alter_table("algorithm_metrics") as batch_op:
+            batch_op.alter_column(
+                "recorded_at",
+                new_column_name="created_at",
+                existing_type=sa.DateTime(timezone=True),
+                existing_nullable=False,
+                existing_server_default=sa.func.now(),
+            )
+
+
+
+[exit=0]
