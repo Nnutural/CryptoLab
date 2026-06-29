@@ -1,5 +1,10 @@
 #!/usr/bin/env Rscript
 
+local_lib <- "D:/Development/R/library/4.6"
+if (dir.exists(local_lib) && !(local_lib %in% .libPaths())) {
+  .libPaths(c(local_lib, .libPaths()))
+}
+
 suppressPackageStartupMessages({
   library(ggplot2)
   library(patchwork)
@@ -11,7 +16,8 @@ suppressPackageStartupMessages({
   library(ragg)
 })
 
-root <- normalizePath(file.path(dirname(sys.frame(1)$ofile), "..", ".."), winslash = "/", mustWork = TRUE)
+script_file <- normalizePath(sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE)[1]), winslash = "/", mustWork = TRUE)
+root <- normalizePath(file.path(dirname(script_file), "..", ".."), winslash = "/", mustWork = TRUE)
 data_dir <- file.path(root, "docs", "report_assets", "data")
 fig_dir <- file.path(root, "docs", "report_assets", "figures")
 dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
@@ -132,4 +138,3 @@ fig <- (p_matrix / p_sources) +
   )
 
 save_pub_r(fig, file.path(fig_dir, "fig2_algorithm_coverage_matrix"))
-

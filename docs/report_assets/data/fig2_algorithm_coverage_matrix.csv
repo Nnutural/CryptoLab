@@ -1,0 +1,16 @@
+category,algorithm,status,status_label,vector_source,library_reference,source_evidence,risk_note,column_order
+Encoding,Base64,implemented_tested,Full,RFC 4648,Python base64,docs/PROGRESS.md; docs/cross_validation_matrix.md; rust_core/src/encoding/base64.rs,None,1
+Encoding,UTF-8,implemented_tested,Full,RFC 3629 / Unicode,Python codec,docs/PROGRESS.md; docs/cross_validation_matrix.md; rust_core/src/encoding/utf8.rs,None,2
+Hash,SHA1,implemented_tested,Full,FIPS 180-4 / RFC,hashlib,docs/PROGRESS.md; docs/cross_validation_matrix.md; rust_core/src/hash/sha1.rs,None,3
+Hash,SHA256,implemented_tested,Full,FIPS 180-4 / RFC,hashlib,docs/PROGRESS.md; docs/cross_validation_matrix.md; rust_core/src/hash/sha2.rs,None,4
+Hash,SHA3,implemented_tested,Full,NIST / RFC,hashlib,docs/PROGRESS.md; docs/cross_validation_matrix.md; rust_core/src/hash/sha3.rs,None,5
+Hash,RIPEMD160,implemented_tested,Full,RFC/NIST matrix,hashlib,docs/PROGRESS.md; docs/cross_validation_matrix.md; rust_core/src/hash/ripemd.rs,None,6
+Hash,HMAC-SHA1,implemented_tested,Full,RFC 2202,stdlib hmac,docs/PROGRESS.md; docs/cross_validation_matrix.md; rust_core/src/hash/hmac.rs,None,7
+Hash,HMAC-SHA256,implemented_tested,Full,RFC 4231,stdlib hmac,docs/PROGRESS.md; docs/cross_validation_matrix.md; rust_core/src/hash/hmac.rs,None,8
+Hash,PBKDF2,implemented_tested,Full,RFC vectors,cryptography,docs/PROGRESS.md; docs/cross_validation_matrix.md; rust_core/src/hash/pbkdf2.rs,None,9
+Symmetric,AES,implemented_tested,Full,NIST SP 800-38A/38D; FIPS 197,cryptography,docs/PROGRESS.md; docs/cross_validation_matrix.md; rust_core/src/symmetric/aes.rs,None,10
+Symmetric,SM4,implemented_tested,Full,GB/T 32907,gmssl,docs/PROGRESS.md; docs/cross_validation_matrix.md; rust_core/src/symmetric/sm4.rs,None,11
+Symmetric,RC6,partial,Partial,RC6 paper vectors,N/A,docs/PROGRESS.md; docs/cross_validation_matrix.md; rust_core/src/symmetric/rc6.rs,Mode coverage limited to ECB/CBC; KAT-only library comparison,12
+Public key,RSA-1024,implemented_tested,Full,RFC 8017,cryptography,docs/PROGRESS.md; docs/cross_validation_matrix.md; rust_core/src/pubkey/rsa.rs,Slow RSA stress tests ignored by design,13
+Public key,ECC-160,implemented_tested,Full,secp160r1,internal KAT,docs/PROGRESS.md; rust_core/src/pubkey/ecc.rs,Mainstream cryptography package lacks secp160r1,14
+Public key,ECDSA,implemented_tested,Full,RFC 6979,KAT-only,docs/PROGRESS.md; docs/cross_validation_matrix.md; rust_core/src/pubkey/ecdsa.rs,secp160r1 third-party reference unavailable,15

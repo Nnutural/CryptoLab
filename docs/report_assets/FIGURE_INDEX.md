@@ -63,6 +63,13 @@
   - `docs/report_assets/figures/fig2_algorithm_coverage_matrix.png`
   - `docs/report_assets/data/fig2_algorithm_coverage_matrix.csv`
 - Reproducible command: `Rscript scripts/figures/plot_algorithm_coverage_matrix.R`
+- Execution status: 已执行；使用 `D:\Development\R-4.6.0\bin\x64\Rscript.exe` 与 `ggplot2 + patchwork + svglite/ragg` 原始 R 设计生成。
+- Refined paper-style outputs:
+  - `docs/report_assets/figures/fig2_algorithm_coverage_refined.pdf`
+  - `docs/report_assets/figures/fig2_algorithm_coverage_refined.png`
+  - `docs/report_assets/data/fig2_algorithm_coverage_refined.csv`
+- Refined script: `scripts/figures/plot_algorithm_coverage_refined.R`
+- Refined reproducible command: `D:\Development\R-4.6.0\bin\x64\Rscript.exe scripts/figures/plot_algorithm_coverage_refined.R`
 
 ## Figure 3
 
@@ -92,6 +99,14 @@
   - `docs/report_assets/figures/fig3_cross_validation_evidence.png`
   - `docs/report_assets/data/fig3_cross_validation_evidence.csv`
 - Reproducible command: `Rscript scripts/figures/plot_cross_validation_evidence.R`
+- Execution status: 已执行；使用 `D:\Development\R-4.6.0\bin\x64\Rscript.exe` 与 `ggplot2 + patchwork + svglite/ragg` 原始 R 设计生成。
+- Refined paper-style outputs:
+  - `docs/report_assets/figures/fig3_cross_validation_refined.pdf`
+  - `docs/report_assets/figures/fig3_cross_validation_refined.png`
+  - `docs/report_assets/data/fig3_cross_validation_refined.csv`
+  - `docs/report_assets/data/fig3_cross_validation_refined_counts.csv`
+- Refined script: `scripts/figures/plot_cross_validation_refined.R`
+- Refined reproducible command: `D:\Development\R-4.6.0\bin\x64\Rscript.exe scripts/figures/plot_cross_validation_refined.R`
 
 ## Figure 4
 
@@ -192,4 +207,3 @@
   - `docs/report_assets/data/fig6_ecb_leak_metrics.csv`
   - `docs/report_assets/data/fig6_pbkdf2_iterations.csv`
 - Reproducible command: `.\.venv\Scripts\python.exe scripts\figures\plot_security_demos.py`
-

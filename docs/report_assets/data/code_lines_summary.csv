@@ -1,0 +1,7 @@
+area,path_pattern,file_count,line_count,non_empty_line_count,test_file_count,evidence_command
+Rust core,rust_core/src/**/*.rs,29,6093,5492,18,Get-ChildItem -Recurse rust_core/src/**/*.rs; Python line counter in scripts/stats/generate_stats.py
+API application,api_server/app/**/*.py,61,5106,4128,0,Get-ChildItem -Recurse api_server/app/**/*.py; Python line counter in scripts/stats/generate_stats.py
+API tests,api_server/tests/**/*.py,18,2935,2421,18,Get-ChildItem -Recurse api_server/tests/**/*.py; Python line counter in scripts/stats/generate_stats.py
+Frontend source,"frontend/src/**/*.{ts,tsx,css}",48,6577,6155,0,"Get-ChildItem -Recurse frontend/src/**/*.{ts,tsx,css}; Python line counter in scripts/stats/generate_stats.py"
+Docs,docs/**/* text assets,94,9448,8802,19,Get-ChildItem -Recurse docs/**/* text assets; Python line counter in scripts/stats/generate_stats.py
+Scripts,scripts/**/*,22,3371,2953,2,Get-ChildItem -Recurse scripts/**/*; Python line counter in scripts/stats/generate_stats.py

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { ChangeEvent, DragEvent, useRef, useState } from "react";
 import { AlertTriangle, Upload, Play, CheckCircle2, ShieldAlert } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { CryptoCard } from "@/components/shared/CryptoCard";
@@ -26,6 +26,7 @@ const TEACHING_WARNING =
 const SAMPLE_PNG_B64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
 const DEFAULT_DEMO_KEY_HEX = "00112233445566778899aabbccddeeff";
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 export function DemosView() {
   const meta = ROUTE_TITLES.demos;
@@ -71,19 +72,92 @@ interface EcbResult {
   duplicate_block_ratio?: number;
 }
 
+interface DemoImage {
+  name: string;
+  size: number;
+  mime: string;
+  base64: string;
+  previewUrl: string;
+}
+
 function EcbDemo() {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [keyHex, setKeyHex] = useState(DEFAULT_DEMO_KEY_HEX);
+  const [selectedImage, setSelectedImage] = useState<DemoImage | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<EcbResult | null>(null);
   const done = !!result;
+
+  const loadImageFile = async (file: File) => {
+    setError(null);
+    const lowerName = file.name.toLowerCase();
+    const isSupported =
+      file.type === "image/png" ||
+      file.type === "image/bmp" ||
+      lowerName.endsWith(".png") ||
+      lowerName.endsWith(".bmp");
+    if (!isSupported) {
+      setError("仅支持 PNG 或 BMP 图像");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setError("图像文件不能超过 5 MB");
+      return;
+    }
+
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result ?? ""));
+        reader.onerror = () => reject(reader.error ?? new Error("读取图像失败"));
+        reader.readAsDataURL(file);
+      });
+      const [, base64 = ""] = dataUrl.split(",", 2);
+      if (!base64) {
+        setError("读取图像失败: 无法解析 Base64 数据");
+        return;
+      }
+      setSelectedImage({
+        name: file.name,
+        size: file.size,
+        mime: file.type || (lowerName.endsWith(".bmp") ? "image/bmp" : "image/png"),
+        base64,
+        previewUrl: dataUrl,
+      });
+      setResult(null);
+    } catch (err: any) {
+      setError(err?.message || "读取图像失败");
+    }
+  };
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      void loadImageFile(file);
+    }
+    event.target.value = "";
+  };
+
+  const handleDrop = (event: DragEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    setDragging(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) {
+      void loadImageFile(file);
+    }
+  };
 
   const run = async () => {
     try {
       setRunning(true);
       setError(null);
       setResult(null);
-      const resp = await ecbImageLeak({ image_b64: SAMPLE_PNG_B64, key_hex: keyHex });
+      const resp = await ecbImageLeak({
+        image_b64: selectedImage?.base64 ?? SAMPLE_PNG_B64,
+        key_hex: keyHex,
+      });
       if (resp.code === 1000) {
         setResult(resp.data as EcbResult);
       } else {
@@ -119,10 +193,57 @@ function EcbDemo() {
     <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-5">
       <CryptoCard title="演示参数" icon={<AlertTriangle size={14} />}>
         <Field label="图像(PNG 或 BMP)">
-          <button className="w-full border-2 border-dashed border-[var(--cl-border)] rounded-md p-6 text-sm text-[var(--cl-text-secondary)] hover:border-[var(--cl-primary)] hover:bg-[var(--cl-primary-light)]/30 transition-colors flex flex-col items-center gap-2">
-            <Upload size={22} />
-            点击或拖入图像
-            <span className="text-[10px] text-[var(--cl-text-placeholder)]">已使用默认示例图像</span>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".png,.bmp,image/png,image/bmp"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setDragging(true);
+            }}
+            onDragOver={(event) => event.preventDefault()}
+            onDragLeave={(event) => {
+              event.preventDefault();
+              setDragging(false);
+            }}
+            onDrop={handleDrop}
+            className={`w-full border-2 border-dashed rounded-md p-4 text-sm text-[var(--cl-text-secondary)] hover:border-[var(--cl-primary)] hover:bg-[var(--cl-primary-light)]/30 transition-colors flex flex-col items-center gap-2 ${
+              dragging
+                ? "border-[var(--cl-primary)] bg-[var(--cl-primary-light)]/40"
+                : "border-[var(--cl-border)]"
+            }`}
+          >
+            {selectedImage ? (
+              <>
+                <div className="h-28 w-full rounded bg-white border border-[var(--cl-border-light)] overflow-hidden flex items-center justify-center">
+                  <img
+                    src={selectedImage.previewUrl}
+                    alt={selectedImage.name}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
+                <span className="max-w-full truncate text-[var(--cl-text-primary)]">
+                  {selectedImage.name}
+                </span>
+                <span className="text-[10px] text-[var(--cl-text-placeholder)]">
+                  {(selectedImage.size / 1024).toFixed(1)} KB · 点击或拖入可替换
+                </span>
+              </>
+            ) : (
+              <>
+                <Upload size={22} />
+                点击或拖入图像
+                <span className="text-[10px] text-[var(--cl-text-placeholder)]">
+                  未选择时使用默认示例图像
+                </span>
+              </>
+            )}
           </button>
         </Field>
         <Field label="AES-128 密钥(hex)">

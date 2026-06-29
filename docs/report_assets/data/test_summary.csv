@@ -1,0 +1,7 @@
+test_layer,command,passed,failed,ignored_or_skipped,deselected,errors,status,evidence_log
+Rust core,cargo test --manifest-path rust_core\Cargo.toml --no-fail-fast,53,0,3,0,0,✅,docs/report_assets/logs/cargo_test_full.txt
+API pytest (requested shell),cd api_server; pytest --tb=no -q,0,0,0,0,1,❌,docs/report_assets/logs/pytest_full.txt
+API pytest (.venv),cd api_server; .\.venv\Scripts\python.exe -m pytest --tb=no -q,254,0,0,1,0,✅,docs/report_assets/logs/pytest_venv_full.txt
+Frontend TypeScript,cd frontend; npm test,tsc smoke,0,0,0,0,✅,docs/report_assets/logs/npm_test_full.txt
+Docker compose config,docker compose -f deploy\docker-compose.yml config,config parsed,0,0,0,0,✅,docs/report_assets/logs/docker_compose_config.txt
+Docker compose build,docker compose -f deploy\docker-compose.yml build,0,1,0,0,1,❌,docs/report_assets/logs/docker_compose_build.txt

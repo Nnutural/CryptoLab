@@ -1,0 +1,18 @@
+family,label,requested_algo,metric,n,mean,median,min,max,data_size_bytes,service_operation,note
+symmetric,AES ECB,aes_ecb,throughput_mb_per_s,5,101.57554427599287,106.58728739298154,75.80931366963101,112.05035384090085,1048576,encrypt,summary from fig4_benchmark_raw.csv
+symmetric,AES GCM,aes_gcm,throughput_mb_per_s,5,13.812165168727375,13.98409310766682,13.191127852317255,14.40485280024823,1048576,gcm_encrypt,summary from fig4_benchmark_raw.csv
+symmetric,SM4 ECB,sm4,throughput_mb_per_s,5,87.13320234130423,88.11226140396411,84.22704081954105,88.70624250275094,1048576,encrypt,summary from fig4_benchmark_raw.csv
+symmetric,RC6 ECB,rc6,throughput_mb_per_s,5,222.77834750734308,222.9700413954812,214.5408556461432,227.2860767847238,1048576,encrypt,summary from fig4_benchmark_raw.csv
+hash,SHA1,sha1,throughput_mb_per_s,5,316.0955783212124,317.54437651590933,307.3573839183038,319.74062340286116,1048576,digest,summary from fig4_benchmark_raw.csv
+hash,SHA256,sha256,throughput_mb_per_s,5,218.26940054194338,216.35949275153277,214.69569285078495,223.30181596042286,1048576,digest,summary from fig4_benchmark_raw.csv
+hash,SHA512,sha512,throughput_mb_per_s,5,318.1962615518663,318.40138825497655,290.5620994891452,342.05909803902404,1048576,digest,summary from fig4_benchmark_raw.csv
+hash,SHA3-256,sha3_256,throughput_mb_per_s,5,290.4118393526684,306.97967860609356,241.55840981814632,308.5506386243448,1048576,digest,summary from fig4_benchmark_raw.csv
+hash,RIPEMD160,ripemd160,throughput_mb_per_s,5,311.17009586567303,311.27193020393975,307.3914407424797,316.4806852333271,1048576,digest,summary from fig4_benchmark_raw.csv
+kdf_hmac,HMAC-SHA256,hmac_sha256,ms_per_op,5,0.006265276296468192,0.006199106695143467,0.006184491720800291,0.006516332788624926,1024,hmac_sha256,summary from fig4_benchmark_raw.csv
+kdf_hmac,PBKDF2-HMAC-SHA256,pbkdf2,ms_per_op,5,14.00818,13.92893,12.5839,15.07356,32,derive_10000,summary from fig4_benchmark_raw.csv
+public_key,RSA encrypt,rsa_encrypt,ms_per_op,5,0.054893199999999996,0.054965,0.054543,0.055363,32,encrypt,summary from fig4_benchmark_raw.csv
+public_key,RSA decrypt,rsa_decrypt,ms_per_op,5,0.8138148,0.800188,0.749772,0.948306,32,decrypt,summary from fig4_benchmark_raw.csv
+public_key,RSA sign,rsa_sign,ms_per_op,5,0.9169,0.910148,0.890728,0.949467,32,sign,summary from fig4_benchmark_raw.csv
+public_key,RSA verify,rsa_verify,ms_per_op,5,0.0600588,0.062008,0.052837,0.062287,32,verify,summary from fig4_benchmark_raw.csv
+public_key,ECDSA sign,ecdsa_sign,ms_per_op,5,19.4090016,18.003894,17.425148,22.278934,32,sign,summary from fig4_benchmark_raw.csv
+public_key,ECDSA verify,ecdsa_verify,ms_per_op,5,34.7888192,33.57855,32.783361,37.567916,32,verify,summary from fig4_benchmark_raw.csv

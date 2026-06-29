@@ -1,0 +1,27 @@
+R figures executed successfully with the original ggplot2/patchwork design.
+Rscript: D:\Development\R-4.6.0\bin\x64\Rscript.exe
+Library path added by scripts: D:/Development/R/library/4.6
+Backend: R / ggplot2 + patchwork + readr + dplyr + tidyr + scales + svglite + ragg.
+Generated:
+- docs/report_assets/figures/fig2_algorithm_coverage_matrix.svg
+- docs/report_assets/figures/fig2_algorithm_coverage_matrix.png
+- docs/report_assets/data/fig2_algorithm_coverage_matrix.csv
+- docs/report_assets/figures/fig3_cross_validation_evidence.svg
+- docs/report_assets/figures/fig3_cross_validation_evidence.png
+- docs/report_assets/data/fig3_cross_validation_evidence.csv
+Commands:
+D:\Development\R-4.6.0\bin\x64\Rscript.exe scripts\figures\plot_algorithm_coverage_matrix.R
+D:\Development\R-4.6.0\bin\x64\Rscript.exe scripts\figures\plot_cross_validation_evidence.R
+
+Refined Nature/Science/Cell-style R outputs also executed successfully.
+Generated:
+- docs/report_assets/figures/fig2_algorithm_coverage_refined.pdf
+- docs/report_assets/figures/fig2_algorithm_coverage_refined.png
+- docs/report_assets/data/fig2_algorithm_coverage_refined.csv
+- docs/report_assets/figures/fig3_cross_validation_refined.pdf
+- docs/report_assets/figures/fig3_cross_validation_refined.png
+- docs/report_assets/data/fig3_cross_validation_refined.csv
+- docs/report_assets/data/fig3_cross_validation_refined_counts.csv
+Commands:
+D:\Development\R-4.6.0\bin\x64\Rscript.exe scripts\figures\plot_algorithm_coverage_refined.R
+D:\Development\R-4.6.0\bin\x64\Rscript.exe scripts\figures\plot_cross_validation_refined.R

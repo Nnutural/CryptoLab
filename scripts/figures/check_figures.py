@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 FIG_DIR = ROOT / "docs" / "report_assets" / "figures"
 DATA_DIR = ROOT / "docs" / "report_assets" / "data"
 QA_MD = ROOT / "docs" / "report_assets" / "FIGURE_QA.md"
+R_STATUS = DATA_DIR / "r_figures_status.txt"
 
 FIGURES = [
     ("Fig. 1", "fig1_validation_overview", ["fig1_validation_overview.csv"]),
@@ -52,6 +53,7 @@ def check_png(path: Path) -> tuple[bool, str, int, int]:
 
 
 def main() -> None:
+    r_missing = R_STATUS.exists() and "Rscript missing" in R_STATUS.read_text(encoding="utf-8", errors="replace")
     lines = [
         "# Figure QA Report",
         "",
@@ -66,11 +68,14 @@ def main() -> None:
         png_ok, png_note, _width, _height = check_png(FIG_DIR / f"{stem}.png")
         row_counts = {name: csv_rows(DATA_DIR / name) for name in csv_names}
         csv_ok = all(count > 0 for count in row_counts.values())
+        r_not_run = fig_id in {"Fig. 2", "Fig. 3"} and r_missing
         ok = svg_ok and png_ok and csv_ok
         all_ok = all_ok and ok
         csv_summary = "; ".join(f"{name}={count}" for name, count in row_counts.items())
+        status = "PASS" if ok else ("NOT RUN" if r_not_run else "FAIL")
+        notes = "R runtime/package missing; Python fallback intentionally not used" if r_not_run else "backend-specific script output"
         lines.append(
-            f"| {fig_id} | {svg_note} | {png_note} | {csv_summary} | {'PASS' if ok else 'FAIL'} | backend-specific script output |"
+            f"| {fig_id} | {svg_note} | {png_note} | {csv_summary} | {status} | {notes} |"
         )
 
     lines.extend(
@@ -86,6 +91,15 @@ def main() -> None:
             f"- Overall status: {'PASS' if all_ok else 'FAIL'}",
         ]
     )
+    if r_missing:
+        lines.extend(
+            [
+                "",
+                "## Missing Runtime",
+                "",
+                f"- R figures not executed: `{R_STATUS.relative_to(ROOT)}` records `Rscript missing`; this follows the backend exclusivity rule.",
+            ]
+        )
     QA_MD.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(QA_MD)
     if not all_ok:
@@ -94,4 +108,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

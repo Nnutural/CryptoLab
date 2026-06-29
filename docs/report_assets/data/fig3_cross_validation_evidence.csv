@@ -1,0 +1,51 @@
+algorithm,evidence_layer,status,status_label,source_evidence,note
+AES,KAT standard vectors,pass,Pass,docs/cross_validation_matrix.md; api_server/tests/test_cross_validation.py,NIST/FIPS vectors
+AES,Third-party reference,pass,Pass,docs/cross_validation_matrix.md,cryptography
+AES,HTTP API tests,pass,Pass,api_server/tests/test_cross_validation.py; api_server/tests/test_aes_verbose.py,encrypt endpoint cross-validation
+AES,Frontend build/integration,partial,Partial,docs/PROGRESS.md; docs/progress_evidence/23_frontend_build_tail.txt,build passes; npm test historical status differs
+AES,Verbose/demo support,pass,Pass,docs/aes_verbose_trace_fips197.json; api_server/tests/test_aes_verbose.py,FIPS trace
+SM4,KAT standard vectors,pass,Pass,docs/cross_validation_matrix.md,GB/T vectors
+SM4,Third-party reference,pass,Pass,docs/cross_validation_matrix.md,gmssl
+SM4,HTTP API tests,pass,Pass,api_server/tests/test_cross_validation.py,ECB/CBC API validation
+SM4,Frontend build/integration,partial,Partial,docs/PROGRESS.md,view and build evidence
+SM4,Verbose/demo support,none,No evidence,docs/verbose_mode.md,verbose mode is AES-only
+RC6,KAT standard vectors,pass,Pass,docs/cross_validation_matrix.md,Rivest/Krovetz vectors
+RC6,Third-party reference,none,No evidence,docs/cross_validation_matrix.md,mainstream Python crypto libraries do not ship RC6
+RC6,HTTP API tests,pass,Pass,api_server/tests/test_cross_validation.py,KAT-only API path
+RC6,Frontend build/integration,partial,Partial,docs/PROGRESS.md,view and build evidence
+RC6,Verbose/demo support,none,No evidence,docs/verbose_mode.md,not a verbose/demo target
+SHA family,KAT standard vectors,pass,Pass,docs/cross_validation_matrix.md,RFC/NIST
+SHA family,Third-party reference,pass,Pass,docs/cross_validation_matrix.md,hashlib
+SHA family,HTTP API tests,pass,Pass,api_server/tests/test_cross_validation.py,hash endpoints
+SHA family,Frontend build/integration,partial,Partial,docs/PROGRESS.md,hash view build evidence
+SHA family,Verbose/demo support,none,No evidence,docs/verbose_mode.md,not a verbose/demo target
+HMAC,KAT standard vectors,pass,Pass,docs/cross_validation_matrix.md,RFC vectors
+HMAC,Third-party reference,pass,Pass,docs/cross_validation_matrix.md,stdlib hmac
+HMAC,HTTP API tests,pass,Pass,api_server/tests/test_cross_validation.py,hmac endpoint
+HMAC,Frontend build/integration,partial,Partial,docs/PROGRESS.md,HmacPbkdf2View build evidence
+HMAC,Verbose/demo support,none,No evidence,docs/verbose_mode.md,not a verbose/demo target
+PBKDF2,KAT standard vectors,pass,Pass,docs/cross_validation_matrix.md,RFC-style vectors
+PBKDF2,Third-party reference,pass,Pass,docs/cross_validation_matrix.md,cryptography
+PBKDF2,HTTP API tests,pass,Pass,api_server/tests/test_cross_validation.py; api_server/tests/test_benchmark.py,pbkdf2 endpoint and benchmark
+PBKDF2,Frontend build/integration,partial,Partial,docs/PROGRESS.md,HmacPbkdf2View and DemosView build evidence
+PBKDF2,Verbose/demo support,pass,Pass,api_server/app/services/demos_service.py,iteration-impact demo
+RSA,KAT standard vectors,pass,Pass,docs/cross_validation_matrix.md,RFC 8017
+RSA,Third-party reference,pass,Pass,docs/cross_validation_matrix.md,cryptography
+RSA,HTTP API tests,pass,Pass,api_server/tests/test_cross_validation.py; api_server/tests/test_benchmark.py,OAEP/PSS endpoints
+RSA,Frontend build/integration,partial,Partial,docs/PROGRESS.md,RsaView build evidence
+RSA,Verbose/demo support,pass,Pass,api_server/app/services/demos_service.py,low-exponent demo
+ECDSA,KAT standard vectors,pass,Pass,docs/cross_validation_matrix.md,RFC 6979
+ECDSA,Third-party reference,none,No evidence,docs/cross_validation_matrix.md,cryptography lacks secp160r1
+ECDSA,HTTP API tests,pass,Pass,api_server/tests/test_cross_validation.py; api_server/tests/test_benchmark.py,sign/verify endpoints
+ECDSA,Frontend build/integration,partial,Partial,docs/PROGRESS.md,EccView build evidence
+ECDSA,Verbose/demo support,pass,Pass,api_server/app/services/demos_service.py,k-reuse demo
+Base64,KAT standard vectors,pass,Pass,docs/cross_validation_matrix.md,RFC 4648
+Base64,Third-party reference,pass,Pass,docs/cross_validation_matrix.md,Python base64
+Base64,HTTP API tests,pass,Pass,api_server/tests/test_cross_validation.py,encoding endpoint
+Base64,Frontend build/integration,partial,Partial,docs/PROGRESS.md,EncodingView build evidence
+Base64,Verbose/demo support,none,No evidence,docs/verbose_mode.md,not a verbose/demo target
+UTF-8,KAT standard vectors,pass,Pass,docs/cross_validation_matrix.md,Unicode
+UTF-8,Third-party reference,pass,Pass,docs/cross_validation_matrix.md,Python codec
+UTF-8,HTTP API tests,pass,Pass,api_server/tests/test_cross_validation.py,encoding endpoint plus rejection case
+UTF-8,Frontend build/integration,partial,Partial,docs/PROGRESS.md,EncodingView build evidence
+UTF-8,Verbose/demo support,none,No evidence,docs/verbose_mode.md,not a verbose/demo target
